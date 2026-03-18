@@ -133,3 +133,8 @@ next-env.d.ts
 # Misc
 # =========================
 *.pem
+
+# =========================
+# Claude Code / Local Development
+# =========================
+.claude/
