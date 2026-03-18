@@ -1,5 +1,5 @@
 # =========================
-# Dependencies (Frontend)
+# Dependencies (Frontend & General)
 # =========================
 node_modules/
 .pnp
@@ -15,10 +15,18 @@ node_modules/
 # =========================
 .env*
 !.env.example
+# Also catch python-specific env files
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
 # =========================
 # Logs
 # =========================
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -28,6 +36,8 @@ yarn-error.log*
 # OS / System
 # =========================
 .DS_Store
+Thumbs.db
+*.swp
 
 # =========================
 # Frontend (client)
@@ -39,43 +49,85 @@ client/dist/
 client/coverage/
 
 # =========================
-# Python Backend (server)
+# Python Backend (Comprehensive)
 # =========================
-server/__pycache__/
-server/*.py[cod]
-server/*.pyo
-server/*.pyd
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.pyo
 
-# Virtual environments
-server/venv/
-server/.venv/
-server/env/
+# C extensions
+*.so
 
-# Python build files
+# Distribution / packaging
+server/.python-version
 server/build/
+server/develop-eggs/
 server/dist/
+server/downloads/
+server/eggs/
+server/.eggs/
+server/lib/
+server/lib64/
+server/parts/
+server/sdist/
+server/var/
+server/wheels/
+server/share/python-wheels/
 server/*.egg-info/
+server/.installed.cfg
+server/*.egg
+server/MANIFEST
 
-# Python logs / db
-server/*.log
+# Pytest / Unit test / Coverage
+server/htmlcov/
+server/.tox/
+server/.nositests/
+server/.coverage
+server/.coverage.*
+server/.cache
+server/nosetests.xml
+server/coverage.xml
+server/*.cover
+server/*.py,cover
+server/.hypothesis/
+server/.pytest_cache/
+server/pytestdebuglog
+
+# Type Checking / Linting
+server/.mypy_cache/
+server/.dmypy.json
+server/dmypy.json
+server/.pyre/
+server/.ruff_cache/
+
+# Jupyter Notebooks
+server/.ipynb_checkpoints
+
+# Databases (SQLite, etc.)
 server/*.sqlite3
+server/*.db
 
 # =========================
-# TypeScript
+# TypeScript / JS
 # =========================
 *.tsbuildinfo
 next-env.d.ts
 
 # =========================
-# Deployment
+# Deployment & IDE
 # =========================
 .vercel
-
-# =========================
-# IDE
-# =========================
 .vscode/
+!.vscode/extensions.json
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # =========================
 # Misc
