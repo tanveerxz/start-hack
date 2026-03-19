@@ -455,10 +455,16 @@ app = FastAPI(
     lifespan    = lifespan,
 )
 
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://onesigma.vercel.app",
+]
+
 # ── CORS — allow the Next.js dev server to call this API ─────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ["http://localhost:3000", "http://localhost:3001"],
+    allow_origins     = allowed_origins,
     allow_credentials = True,
     allow_methods     = ["*"],
     allow_headers     = ["*"],
@@ -574,7 +580,20 @@ async def health():
         "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
         "agent_trained":   agent.sols_trained,
     }
-    
+
+
+@app.get("/")
+async def root_health():
+    """
+    Default root route for platforms that health-check "/" by default.
+    Mirrors the API health response so deployments don't fail on a 404.
+    """
+    return {
+        "status":          "ok",
+        "sol":             greenhouse_state.day,
+        "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
+        "agent_trained":   agent.sols_trained,
+    }
 
 
 @app.get("/api/ai-summary")
