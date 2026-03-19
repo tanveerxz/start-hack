@@ -121,7 +121,6 @@ export function useMissionControl(): MissionControlState {
       setSelectedDay(solRes.day)
       setSolsByDay({ [solRes.day]: solRes })
       setMissionComplete(solRes.days_remaining <= 0)
-      void fetchRecommendationForDay(solRes.day)
     } catch (err) {
       setError(toMessage(err))
     } finally {
@@ -148,7 +147,6 @@ export function useMissionControl(): MissionControlState {
       setSelectedDay(liveSol.day)
       setSolsByDay((prev) => ({ ...prev, [liveSol.day]: liveSol }))
       setMissionComplete(liveSol.days_remaining <= 0)
-      void fetchRecommendationForDay(liveSol.day)
     } catch (err) {
       setError(toMessage(err))
     } finally {
@@ -170,7 +168,6 @@ export function useMissionControl(): MissionControlState {
       setSelectedDay(stepped.day)
       setSolsByDay((prev) => ({ ...prev, [stepped.day]: stepped }))
       setMissionComplete(stepped.days_remaining <= 0)
-      void fetchRecommendationForDay(stepped.day)
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         setMissionComplete(true)
@@ -186,23 +183,19 @@ export function useMissionControl(): MissionControlState {
       setTimelineError(null)
       setSelectedDay(day)
 
-      if (solsByDay[day]) {
-        void fetchRecommendationForDay(day)
-        return
-      }
+      if (solsByDay[day]) return
 
       setTimelineLoading(true)
       try {
         const sol = await getSol(day)
         setSolsByDay((prev) => ({ ...prev, [day]: sol }))
-        void fetchRecommendationForDay(day)
       } catch (err) {
         setTimelineError(toMessage(err))
       } finally {
         setTimelineLoading(false)
       }
     },
-    [fetchRecommendationForDay, solsByDay],
+    [solsByDay],
   )
 
   const goToLatest = useCallback(async () => {

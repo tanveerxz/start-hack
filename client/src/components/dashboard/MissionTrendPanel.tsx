@@ -93,6 +93,16 @@ export default function MissionTrendPanel({
           <div className="relative h-[320px] w-full overflow-hidden rounded-[18px] md:h-[360px]">
             <div className="absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.20)_1px,transparent_1px)] [background-size:100%_25%]" />
             <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(90deg,rgba(255,255,255,0.30)_1px,transparent_1px)] [background-size:8.333%_100%]" />
+            <div className="pointer-events-none absolute left-2 top-4 flex h-[calc(100%-4rem)] flex-col justify-between text-[10px] uppercase tracking-[0.14em] text-white/28">
+              <span>100</span>
+              <span>75</span>
+              <span>50</span>
+              <span>25</span>
+              <span>0</span>
+            </div>
+            <div className="pointer-events-none absolute left-[-34px] top-1/2 -translate-y-1/2 -rotate-90 text-[10px] uppercase tracking-[0.22em] text-white/34">
+              Mission Signal
+            </div>
 
             <svg
               viewBox={`0 0 ${width} ${height}`}
@@ -125,7 +135,10 @@ export default function MissionTrendPanel({
               />
             </svg>
 
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-white/34 md:px-3">
+            <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.22em] text-white/34">
+              Relative Sol Offset
+            </div>
+            <div className="absolute bottom-5 left-0 right-0 flex justify-between px-2 text-xs text-white/34 md:px-3">
               {['-11', '-10', '-9', '-8', '-7', '-6', '-5', '-4', '-3', '-2', '-1', 'Now'].map(
                 (label) => (
                   <span key={label}>{label}</span>

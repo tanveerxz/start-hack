@@ -33,6 +33,7 @@ export default function DashboardPage() {
     currentRecommendation,
     currentRecommendationLoading,
     currentRecommendationError,
+    fetchRecommendationForDay,
     runStep,
   } = useMissionControl()
 
@@ -145,6 +146,7 @@ export default function DashboardPage() {
                     recommendation={currentRecommendation}
                     loading={currentRecommendationLoading}
                     error={currentRecommendationError}
+                    onGenerate={() => void fetchRecommendationForDay(selectedSol.day, true)}
                   />
                 </div>
               </div>
