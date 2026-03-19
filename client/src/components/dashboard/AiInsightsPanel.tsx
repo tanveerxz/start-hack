@@ -147,7 +147,7 @@ export default function AiInsightsPanel({
             <div
               className={`inline-flex rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.22em] ${riskTone.border} ${riskTone.bg} ${riskTone.text}`}
             >
-              Risk {recommendation?.crew_risk_level ?? 'unknown'}
+              Risk Level {recommendation?.crew_risk_level ?? 'unknown'}
             </div>
           </div>
         </div>

@@ -90,12 +90,12 @@ export default function MissionHeader({
 
         <div className="grid gap-3 sm:grid-cols-3">
           <StatPill
-            label="Current Sol"
+            label="Sol Number" 
             value={`${health?.sol ?? '-'}`}
             tooltip="The latest simulated Martian day available from mission control."
           />
           <StatPill
-            label="Remaining"
+            label="Sol Remaining"
             value={`${health?.sols_remaining ?? '-'}`}
             tooltip="Number of sols left before the 450-sol mission window is complete."
           />
