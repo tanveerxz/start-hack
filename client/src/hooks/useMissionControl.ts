@@ -1,14 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ApiError,
+  getClaudeRecommendation,
   getHealth,
   getMissionSummary,
   getSol,
   stepSimulation,
 } from '@/lib/api/greenhouse'
 import type {
+  ClaudeRecommendation,
   DailyResponse,
   HealthResponse,
   MissionSummary,
@@ -23,6 +25,12 @@ interface MissionControlState {
   selectedDay: number | null
   selectedSol: DailyResponse | null
   solsByDay: Record<number, DailyResponse>
+  recommendationsByDay: Record<number, ClaudeRecommendation>
+  recommendationsLoadingByDay: Record<number, boolean>
+  recommendationsErrorByDay: Record<number, string | null>
+  currentRecommendation: ClaudeRecommendation | null
+  currentRecommendationLoading: boolean
+  currentRecommendationError: string | null
   loading: boolean
   sectionLoading: boolean
   timelineLoading: boolean
@@ -34,6 +42,7 @@ interface MissionControlState {
   selectDay: (day: number) => Promise<void>
   refresh: () => Promise<void>
   goToLatest: () => Promise<void>
+  fetchRecommendationForDay: (day: number, force?: boolean) => Promise<void>
   timelinePoints: TimelinePoint[]
 }
 
@@ -49,6 +58,15 @@ export function useMissionControl(): MissionControlState {
   const [currentSol, setCurrentSol] = useState<DailyResponse | null>(null)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [solsByDay, setSolsByDay] = useState<Record<number, DailyResponse>>({})
+  const [recommendationsByDay, setRecommendationsByDay] = useState<
+    Record<number, ClaudeRecommendation>
+  >({})
+  const [recommendationsLoadingByDay, setRecommendationsLoadingByDay] = useState<
+    Record<number, boolean>
+  >({})
+  const [recommendationsErrorByDay, setRecommendationsErrorByDay] = useState<
+    Record<number, string | null>
+  >({})
   const [loading, setLoading] = useState(true)
   const [sectionLoading, setSectionLoading] = useState(false)
   const [timelineLoading, setTimelineLoading] = useState(false)
@@ -56,6 +74,37 @@ export function useMissionControl(): MissionControlState {
   const [error, setError] = useState<string | null>(null)
   const [timelineError, setTimelineError] = useState<string | null>(null)
   const [missionComplete, setMissionComplete] = useState(false)
+  const recommendationsByDayRef = useRef<Record<number, ClaudeRecommendation>>({})
+  const recommendationsLoadingByDayRef = useRef<Record<number, boolean>>({})
+
+  const fetchRecommendationForDay = useCallback(async (day: number, force = false) => {
+    if (!force && recommendationsByDayRef.current[day]) return
+    if (recommendationsLoadingByDayRef.current[day]) return
+
+    recommendationsLoadingByDayRef.current = {
+      ...recommendationsLoadingByDayRef.current,
+      [day]: true,
+    }
+    setRecommendationsLoadingByDay((prev) => ({ ...prev, [day]: true }))
+    setRecommendationsErrorByDay((prev) => ({ ...prev, [day]: null }))
+
+    try {
+      const recommendation = await getClaudeRecommendation(day)
+      recommendationsByDayRef.current = {
+        ...recommendationsByDayRef.current,
+        [day]: recommendation,
+      }
+      setRecommendationsByDay((prev) => ({ ...prev, [day]: recommendation }))
+    } catch (err) {
+      setRecommendationsErrorByDay((prev) => ({ ...prev, [day]: toMessage(err) }))
+    } finally {
+      recommendationsLoadingByDayRef.current = {
+        ...recommendationsLoadingByDayRef.current,
+        [day]: false,
+      }
+      setRecommendationsLoadingByDay((prev) => ({ ...prev, [day]: false }))
+    }
+  }, [])
 
   const bootstrap = useCallback(async () => {
     setLoading(true)
@@ -72,12 +121,13 @@ export function useMissionControl(): MissionControlState {
       setSelectedDay(solRes.day)
       setSolsByDay({ [solRes.day]: solRes })
       setMissionComplete(solRes.days_remaining <= 0)
+      void fetchRecommendationForDay(solRes.day)
     } catch (err) {
       setError(toMessage(err))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetchRecommendationForDay])
 
   useEffect(() => {
     void bootstrap()
@@ -98,12 +148,13 @@ export function useMissionControl(): MissionControlState {
       setSelectedDay(liveSol.day)
       setSolsByDay((prev) => ({ ...prev, [liveSol.day]: liveSol }))
       setMissionComplete(liveSol.days_remaining <= 0)
+      void fetchRecommendationForDay(liveSol.day)
     } catch (err) {
       setError(toMessage(err))
     } finally {
       setSectionLoading(false)
     }
-  }, [])
+  }, [fetchRecommendationForDay])
 
   const runStep = useCallback(async (count: StepSize) => {
     setPendingStepCount(count)
@@ -119,6 +170,7 @@ export function useMissionControl(): MissionControlState {
       setSelectedDay(stepped.day)
       setSolsByDay((prev) => ({ ...prev, [stepped.day]: stepped }))
       setMissionComplete(stepped.days_remaining <= 0)
+      void fetchRecommendationForDay(stepped.day)
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         setMissionComplete(true)
@@ -127,26 +179,30 @@ export function useMissionControl(): MissionControlState {
     } finally {
       setPendingStepCount(null)
     }
-  }, [])
+  }, [fetchRecommendationForDay])
 
   const selectDay = useCallback(
     async (day: number) => {
       setTimelineError(null)
       setSelectedDay(day)
 
-      if (solsByDay[day]) return
+      if (solsByDay[day]) {
+        void fetchRecommendationForDay(day)
+        return
+      }
 
       setTimelineLoading(true)
       try {
         const sol = await getSol(day)
         setSolsByDay((prev) => ({ ...prev, [day]: sol }))
+        void fetchRecommendationForDay(day)
       } catch (err) {
         setTimelineError(toMessage(err))
       } finally {
         setTimelineLoading(false)
       }
     },
-    [solsByDay],
+    [fetchRecommendationForDay, solsByDay],
   )
 
   const goToLatest = useCallback(async () => {
@@ -158,6 +214,23 @@ export function useMissionControl(): MissionControlState {
     if (!selectedDay) return currentSol
     return solsByDay[selectedDay] ?? null
   }, [currentSol, selectedDay, solsByDay])
+
+  const recommendationDay = selectedSol?.day ?? selectedDay ?? currentSol?.day ?? null
+
+  const currentRecommendation = useMemo(() => {
+    if (!recommendationDay) return null
+    return recommendationsByDay[recommendationDay] ?? null
+  }, [recommendationDay, recommendationsByDay])
+
+  const currentRecommendationLoading = useMemo(() => {
+    if (!recommendationDay) return false
+    return recommendationsLoadingByDay[recommendationDay] ?? false
+  }, [recommendationDay, recommendationsLoadingByDay])
+
+  const currentRecommendationError = useMemo(() => {
+    if (!recommendationDay) return null
+    return recommendationsErrorByDay[recommendationDay] ?? null
+  }, [recommendationDay, recommendationsErrorByDay])
 
   const timelinePoints = useMemo(() => {
     return Object.values(solsByDay)
@@ -180,6 +253,12 @@ export function useMissionControl(): MissionControlState {
     selectedDay,
     selectedSol,
     solsByDay,
+    recommendationsByDay,
+    recommendationsLoadingByDay,
+    recommendationsErrorByDay,
+    currentRecommendation,
+    currentRecommendationLoading,
+    currentRecommendationError,
     loading,
     sectionLoading,
     timelineLoading,
@@ -191,6 +270,7 @@ export function useMissionControl(): MissionControlState {
     selectDay,
     refresh,
     goToLatest,
+    fetchRecommendationForDay,
     timelinePoints,
   }
 }

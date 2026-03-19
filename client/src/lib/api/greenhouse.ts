@@ -1,4 +1,5 @@
 import type {
+  ClaudeRecommendation,
   DailyResponse,
   HealthResponse,
   MissionSummary,
@@ -54,6 +55,43 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+function normalizeRecommendation(
+  payload: Partial<ClaudeRecommendation> & {
+    recommendations?: string[]
+    critical_issues?: string[]
+  },
+  day: number,
+): ClaudeRecommendation {
+  if (Array.isArray(payload.next_steps)) {
+    return {
+      generated_for_day: payload.generated_for_day ?? day,
+      status_summary: payload.status_summary ?? 'AI summary unavailable.',
+      next_steps: payload.next_steps,
+      warnings: payload.warnings ?? [],
+      outlook: payload.outlook ?? 'No outlook available.',
+      crew_risk_level: payload.crew_risk_level ?? 'unknown',
+      confidence: payload.confidence ?? null,
+      is_fallback: payload.is_fallback ?? false,
+    }
+  }
+
+  return {
+    generated_for_day: day,
+    status_summary: payload.status_summary ?? 'AI summary unavailable.',
+    next_steps: (payload.recommendations ?? []).map((action, index) => ({
+      id: `${day}-${index + 1}`,
+      action,
+      priority: 'medium',
+      rationale: 'Derived from the current AI guidance payload.',
+    })),
+    warnings: payload.warnings ?? payload.critical_issues ?? [],
+    outlook: payload.outlook ?? 'No outlook available.',
+    crew_risk_level: payload.crew_risk_level ?? 'unknown',
+    confidence: payload.confidence ?? null,
+    is_fallback: payload.is_fallback ?? false,
+  }
+}
+
 export function getHealth() {
   return request<HealthResponse>('/api/health')
 }
@@ -71,4 +109,12 @@ export function stepSimulation(payload: StepRequest) {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export function getClaudeRecommendation(day: number) {
+  // Backend currently exposes /api/ai-summary; the day query keeps the client
+  // aligned with the expected per-sol contract once the server uses it.
+  return request<Partial<ClaudeRecommendation>>(
+    `/api/ai-summary?day=${encodeURIComponent(day)}`,
+  ).then((payload) => normalizeRecommendation(payload, day))
 }
