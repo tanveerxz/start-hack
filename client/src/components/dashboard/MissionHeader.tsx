@@ -101,7 +101,7 @@ export default function MissionHeader({
           />
           <StatPill
             label="Mission Status"
-            value={missionSummary?.mission_status ?? 'nominal'}
+            value={missionSummary?.mission_status ?? 'Nominal'}
             tone={missionTone(missionSummary?.mission_status)}
             tooltip="High-level health flag derived from critical resource state and recent reward performance."
           />

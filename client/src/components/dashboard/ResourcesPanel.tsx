@@ -89,7 +89,7 @@ export default function ResourcesPanel({
                 : 'border-cyan-400/20 bg-cyan-400/10 text-cyan-100'
             }`}
           >
-            {anyCritical ? 'Critical state detected' : 'Resource state nominal'}
+            {anyCritical ? 'Critical state detected' : 'Resource State Nominal'}
           </div>
         </div>
 
