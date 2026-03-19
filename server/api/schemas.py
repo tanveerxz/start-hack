@@ -376,7 +376,7 @@ def build_daily_response(
     # ── Nutrition ─────────────────────────────────────────────────────────────
     # 30-sol rolling average from reward.py history
     from agent.reward import harvest_kcal_history, harvest_protein_history
-    window = 30
+    window = 60
     recent_kcal    = harvest_kcal_history[-window:]
     recent_protein = harvest_protein_history[-window:]
     avg_kcal    = sum(recent_kcal)    / len(recent_kcal)    if recent_kcal    else 0.0
