@@ -1,4 +1,5 @@
 import type { ResourceData } from '@/types/greenhouse'
+import InfoTooltip from '@/components/dashboard/InfoTooltip'
 
 interface ResourcesPanelProps {
   resources: ResourceData | null
@@ -34,21 +35,25 @@ function MetricCard({
   label,
   value,
   sub,
+  tooltip,
 }: {
   label: string
   value: string
   sub: string
+  tooltip: string
 }) {
   return (
-    <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
-        {label}
-      </p>
-      <p className="mt-3 break-words text-[26px] font-semibold leading-none tracking-[-0.04em] text-white md:text-[30px]">
-        {value}
-      </p>
-      <p className="mt-3 text-sm leading-6 text-white/46">{sub}</p>
-    </div>
+    <InfoTooltip content={tooltip}>
+      <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+          {label}
+        </p>
+        <p className="mt-3 break-words text-[26px] font-semibold leading-none tracking-[-0.04em] text-white md:text-[30px]">
+          {value}
+        </p>
+        <p className="mt-3 text-sm leading-6 text-white/46">{sub}</p>
+      </div>
+    </InfoTooltip>
   )
 }
 
@@ -91,110 +96,120 @@ export default function ResourcesPanel({
         <div className={`grid gap-4 ${compact ? 'xl:grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]'}`}>
           <div className="grid gap-3 md:grid-cols-2">
             {[
-              ['Water Available', resources ? `${resources.water_available_liters.toFixed(1)} L` : '—', 'Immediate reserve'],
-              ['Water Consumed', resources ? `${resources.water_consumed_liters.toFixed(1)} L` : '—', 'This sol usage'],
-              ['Water Recycled', resources ? `${resources.water_recycled_liters.toFixed(1)} L` : '—', 'Recovered flow'],
-              ['Water Extracted', resources ? `${resources.water_extracted_liters.toFixed(1)} L` : '—', 'External supplementation'],
-            ].map(([label, value, sub]) => (
-              <MetricCard key={label} label={label} value={value} sub={sub} />
+              ['Water Available', resources ? `${resources.water_available_liters.toFixed(1)} L` : '-', 'Immediate reserve', 'Water currently available in the loop after consumption and replenishment.'],
+              ['Water Consumed', resources ? `${resources.water_consumed_liters.toFixed(1)} L` : '-', 'This sol usage', 'Total water used by the greenhouse during the current sol.'],
+              ['Water Recycled', resources ? `${resources.water_recycled_liters.toFixed(1)} L` : '-', 'Recovered flow', 'Water captured and returned into the system through recycling.'],
+              ['Water Extracted', resources ? `${resources.water_extracted_liters.toFixed(1)} L` : '-', 'External supplementation', 'Additional water pulled from outside the closed loop when reserves and recycling are not enough.'],
+            ].map(([label, value, sub, tooltip]) => (
+              <MetricCard key={label} label={label} value={value} sub={sub} tooltip={tooltip} />
             ))}
           </div>
 
           <div className="grid gap-3">
-            <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
-                  Recycling Ratio
-                </p>
-                <p className="text-base font-semibold text-white md:text-lg">
-                  {resources ? `${resources.recycling_ratio.toFixed(1)}%` : '—'}
-                </p>
-              </div>
-
-              <ProgressBar
-                value={resources?.recycling_ratio ?? 0}
-                tone={resources?.water_critical ? 'red' : 'cyan'}
-              />
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-white/60">
-                <div className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2">
-                  Water critical: {resources?.water_critical ? 'Yes' : 'No'}
+            <InfoTooltip content="Recycled water divided by consumed water for this sol. This is a headline closed-loop efficiency metric for mission sustainability.">
+              <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+                    Recycling Ratio
+                  </p>
+                  <p className="text-base font-semibold text-white md:text-lg">
+                    {resources ? `${resources.recycling_ratio.toFixed(1)}%` : '-'}
+                  </p>
                 </div>
-                <div className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2">
-                  Nutrients critical: {resources?.nutrients_critical ? 'Yes' : 'No'}
-                </div>
-              </div>
-            </div>
 
-            <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
-                  Stock Remaining
-                </p>
-                <p className="text-sm text-white/50">N / K / Fe</p>
-              </div>
+                <ProgressBar
+                  value={resources?.recycling_ratio ?? 0}
+                  tone={resources?.water_critical ? 'red' : 'cyan'}
+                />
 
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between text-sm text-white/72">
-                    <span>N stock</span>
-                    <span>{resources ? `${resources.n_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+                <div className="mt-4 grid gap-3 text-sm text-white/60 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2">
+                    Water critical: {resources?.water_critical ? 'Yes' : 'No'}
                   </div>
-                  <ProgressBar
-                    value={resources?.n_stock_remaining_pct ?? 0}
-                    tone={(resources?.n_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-sm text-white/72">
-                    <span>K stock</span>
-                    <span>{resources ? `${resources.k_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+                  <div className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2">
+                    Nutrients critical: {resources?.nutrients_critical ? 'Yes' : 'No'}
                   </div>
-                  <ProgressBar
-                    value={resources?.k_stock_remaining_pct ?? 0}
-                    tone={(resources?.k_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-sm text-white/72">
-                    <span>Fe stock</span>
-                    <span>{resources ? `${resources.fe_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
-                  </div>
-                  <ProgressBar
-                    value={resources?.fe_stock_remaining_pct ?? 0}
-                    tone={(resources?.fe_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
-                  />
                 </div>
               </div>
-            </div>
+            </InfoTooltip>
+
+            <InfoTooltip content="Mission stock remaining for the primary nutrient reserves. Falling bars indicate long-run depletion pressure on the closed-loop resource plan.">
+              <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+                    Stock Remaining
+                  </p>
+                  <p className="text-sm text-white/50">N / K / Fe</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between text-sm text-white/72">
+                      <span>N stock</span>
+                      <span>{resources ? `${resources.n_stock_remaining_pct.toFixed(1)}%` : '-'}</span>
+                    </div>
+                    <ProgressBar
+                      value={resources?.n_stock_remaining_pct ?? 0}
+                      tone={(resources?.n_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between text-sm text-white/72">
+                      <span>K stock</span>
+                      <span>{resources ? `${resources.k_stock_remaining_pct.toFixed(1)}%` : '-'}</span>
+                    </div>
+                    <ProgressBar
+                      value={resources?.k_stock_remaining_pct ?? 0}
+                      tone={(resources?.k_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between text-sm text-white/72">
+                      <span>Fe stock</span>
+                      <span>{resources ? `${resources.fe_stock_remaining_pct.toFixed(1)}%` : '-'}</span>
+                    </div>
+                    <ProgressBar
+                      value={resources?.fe_stock_remaining_pct ?? 0}
+                      tone={(resources?.fe_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                    />
+                  </div>
+                </div>
+              </div>
+            </InfoTooltip>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
-                  N ppm
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
-                  {resources ? resources.nutrient_n_ppm.toFixed(1) : '—'}
-                </p>
-              </div>
-              <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
-                  K ppm
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
-                  {resources ? resources.nutrient_k_ppm.toFixed(1) : '—'}
-                </p>
-              </div>
-              <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
-                  Fe ppm
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
-                  {resources ? resources.nutrient_fe_ppm.toFixed(1) : '—'}
-                </p>
-              </div>
+              <InfoTooltip content="Instantaneous nitrogen concentration in the nutrient solution.">
+                <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+                    N ppm
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-white">
+                    {resources ? resources.nutrient_n_ppm.toFixed(1) : '-'}
+                  </p>
+                </div>
+              </InfoTooltip>
+              <InfoTooltip content="Instantaneous potassium concentration in the nutrient solution.">
+                <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+                    K ppm
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-white">
+                    {resources ? resources.nutrient_k_ppm.toFixed(1) : '-'}
+                  </p>
+                </div>
+              </InfoTooltip>
+              <InfoTooltip content="Instantaneous iron concentration in the nutrient solution.">
+                <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+                    Fe ppm
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-white">
+                    {resources ? resources.nutrient_fe_ppm.toFixed(1) : '-'}
+                  </p>
+                </div>
+              </InfoTooltip>
             </div>
           </div>
         </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import InfoTooltip from '@/components/dashboard/InfoTooltip'
+
 interface StatusFeedItem {
   label: string
   value: string
@@ -76,25 +78,27 @@ export default function StatusFeedPanel({
                 key={`${item.label}-${i}`}
                 className={`group relative flex items-start gap-3 rounded-[18px] border border-white/8 px-4 py-3 transition-all duration-300 hover:border-white/14 hover:bg-white/[0.06] ${styles.bg}`}
               >
-                {/* Dot */}
-                <div className="mt-[6px] flex h-2.5 w-2.5 items-center justify-center">
-                  <div
-                    className={`h-2 w-2 rounded-full ${styles.dot} shadow-[0_0_8px_rgba(255,255,255,0.25)]`}
-                  />
-                </div>
+                <InfoTooltip content={`${item.label}: ${item.value}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-[6px] flex h-2.5 w-2.5 items-center justify-center">
+                      <div
+                        className={`h-2 w-2 rounded-full ${styles.dot} shadow-[0_0_8px_rgba(255,255,255,0.25)]`}
+                      />
+                    </div>
 
-                {/* Content */}
-                <div className="flex flex-col">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-                    {item.label}
-                  </p>
+                    <div className="flex flex-col">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
+                        {item.label}
+                      </p>
 
-                  <p
-                    className={`mt-1 text-[14px] leading-6 font-medium ${styles.text}`}
-                  >
-                    {item.value}
-                  </p>
-                </div>
+                      <p
+                        className={`mt-1 text-[14px] leading-6 font-medium ${styles.text}`}
+                      >
+                        {item.value}
+                      </p>
+                    </div>
+                  </div>
+                </InfoTooltip>
               </div>
             )
           })}

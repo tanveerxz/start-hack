@@ -1,4 +1,5 @@
 import type { EnvironmentData } from '@/types/greenhouse'
+import InfoTooltip from '@/components/dashboard/InfoTooltip'
 
 interface EnvironmentPanelProps {
   environment: EnvironmentData | null
@@ -9,21 +10,25 @@ function MetricCard({
   label,
   value,
   sub,
+  tooltip,
 }: {
   label: string
   value: string
   sub: string
+  tooltip: string
 }) {
   return (
-    <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
-        {label}
-      </p>
-      <p className="mt-3 break-words text-[26px] font-semibold leading-none tracking-[-0.04em] text-white md:text-[30px]">
-        {value}
-      </p>
-      <p className="mt-3 text-sm leading-6 text-white/46">{sub}</p>
-    </div>
+    <InfoTooltip content={tooltip}>
+      <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+          {label}
+        </p>
+        <p className="mt-3 break-words text-[26px] font-semibold leading-none tracking-[-0.04em] text-white md:text-[30px]">
+          {value}
+        </p>
+        <p className="mt-3 text-sm leading-6 text-white/46">{sub}</p>
+      </div>
+    </InfoTooltip>
   )
 }
 
@@ -32,14 +37,14 @@ export default function EnvironmentPanel({
   compact = false,
 }: EnvironmentPanelProps) {
   const metrics = [
-    ['Temperature', environment ? `${environment.temp_celsius.toFixed(1)} °C` : '—', 'Thermal control band'],
-    ['Humidity', environment ? `${environment.humidity_rh.toFixed(1)} %` : '—', 'Relative humidity'],
-    ['CO₂', environment ? `${environment.co2_ppm.toFixed(0)} ppm` : '—', 'Atmospheric enrichment'],
-    ['PAR', environment ? `${environment.par_umol_m2s.toFixed(0)} µmol/m²/s` : '—', 'Photosynthetic radiation'],
-    ['pH', environment ? environment.ph.toFixed(2) : '—', 'Root-zone acidity'],
-    ['EC', environment ? `${environment.ec_ms_cm.toFixed(2)} mS/cm` : '—', 'Solution conductivity'],
-    ['Water Reserve', environment ? `${environment.water_liters_available.toFixed(1)} L` : '—', 'Immediate water availability'],
-    ['Power Reserve', environment ? `${environment.power_kwh_available.toFixed(1)} kWh` : '—', 'Current power availability'],
+    ['Temperature', environment ? `${environment.temp_celsius.toFixed(1)} C` : '-', 'Thermal control band', 'Greenhouse air temperature around the crop canopy.'],
+    ['Humidity', environment ? `${environment.humidity_rh.toFixed(1)} %` : '-', 'Relative humidity', 'Relative humidity in the greenhouse atmosphere.'],
+    ['CO2', environment ? `${environment.co2_ppm.toFixed(0)} ppm` : '-', 'Atmospheric enrichment', 'Carbon dioxide concentration available for photosynthesis.'],
+    ['PAR', environment ? `${environment.par_umol_m2s.toFixed(0)} umol/m²/s` : '-', 'Photosynthetic radiation', 'Usable light delivered to crops for growth.'],
+    ['pH', environment ? environment.ph.toFixed(2) : '-', 'Root-zone acidity', 'Nutrient solution acidity and uptake balance.'],
+    ['EC', environment ? `${environment.ec_ms_cm.toFixed(2)} mS/cm` : '-', 'Solution conductivity', 'Proxy for dissolved nutrient strength in the solution.'],
+    ['Water Reserve', environment ? `${environment.water_liters_available.toFixed(1)} L` : '-', 'Immediate water availability', 'Water currently available before more recovery or extraction is required.'],
+    ['Power Reserve', environment ? `${environment.power_kwh_available.toFixed(1)} kWh` : '-', 'Current power availability', 'Usable power capacity for lighting, pumping, and climate control.'],
   ]
 
   return (
@@ -72,8 +77,8 @@ export default function EnvironmentPanel({
               : 'md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
           }`}
         >
-          {metrics.map(([label, value, sub]) => (
-            <MetricCard key={label} label={label} value={value} sub={sub} />
+          {metrics.map(([label, value, sub, tooltip]) => (
+            <MetricCard key={label} label={label} value={value} sub={sub} tooltip={tooltip} />
           ))}
         </div>
       </div>
