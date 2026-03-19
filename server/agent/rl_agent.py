@@ -144,6 +144,7 @@ def build_observation(
     needs_kcal: float,
     needs_protein: float,
     mission_duration: int = 450,
+    crew_state=None,
 ) -> AgentObservation:
     """
     Build the normalised state vector from simulation outputs.

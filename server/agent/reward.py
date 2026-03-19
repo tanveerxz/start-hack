@@ -340,6 +340,7 @@ def score(
     res: ResourceStatus,
     schedule: DailySchedule,
     needs: CrewNutritionNeeds,
+    crew_state=None,
 ) -> RewardSignal:
     """
     Compute the full reward signal for this sol.

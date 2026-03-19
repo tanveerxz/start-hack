@@ -49,6 +49,7 @@ from agent.reward import RewardSignal
 from agent.rl_agent import AgentState
 from environment.crops import CropStatus, SimulationResult
 from environment.resources import ResourceStatus
+from agent.crew import CrewDailyState, AstronautDailyState
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -244,6 +245,45 @@ class NutritionSchema(BaseModel):
 # These are what the FastAPI routes in main.py return directly
 # ─────────────────────────────────────────────────────────────────────────────
 
+class AstronautSchema(BaseModel):
+    name:                         str
+    role:                         str
+    age:                          int
+    sex:                          str
+    weight_kg:                    float
+    kcal_needed_today:            float
+    protein_needed_today:         float
+    water_needed_today:           float
+    kcal_coverage_pct:            float
+    protein_coverage_pct:         float
+    health_status:                str
+    active_conditions:            list[str]
+    consecutive_low_coverage_sols: int
+    days_on_mission:              int
+    total_evas:                   int
+    total_illness_days:           int
+    total_injury_days:            int
+
+
+class CrewSchema(BaseModel):
+    astronauts:                  list[AstronautSchema]
+    total_kcal_needed:           float
+    total_protein_needed:        float
+    total_water_needed:          float
+    avg_kcal_coverage:           float
+    min_kcal_coverage:           float
+    avg_protein_coverage:        float
+    min_protein_coverage:        float
+    avg_health_score:            float
+    crew_need_variance:          float
+    any_in_triage:               bool
+    triage_astronaut:            Optional[str]
+    crew_critical:               bool
+    medic_available:             bool
+    total_mission_evas:          int
+    total_mission_illness_days:  int
+    total_mission_injury_days:   int
+
 class DailyResponseSchema(BaseModel):
     """
     The main API payload — returned every sol.
@@ -273,6 +313,9 @@ class DailyResponseSchema(BaseModel):
 
     # Crop-by-crop performance
     crop_statuses:    list[CropStatusSchema]
+
+    # Crew health and individual astronaut states
+    crew:             Optional[CrewSchema] = None
 
     # Human-readable summary for the dashboard header
     summary:          str
@@ -313,6 +356,13 @@ class MissionSummarySchema(BaseModel):
     # Mission health — overall flag
     mission_status:           str   # "nominal" | "caution" | "critical"
 
+    # Crew lifetime stats — None until crew system is active
+    total_crew_evas:          Optional[int]   = None
+    total_crew_illness_days:  Optional[int]   = None
+    total_crew_injury_days:   Optional[int]   = None
+    healthiest_astronaut:     Optional[str]   = None  # name of best-health crew member
+    most_at_risk_astronaut:   Optional[str]   = None  # name of most fatigued crew member
+
 
 class SimStepRequestSchema(BaseModel):
     """
@@ -341,6 +391,7 @@ def build_daily_response(
     mission_duration: int   = 450,
     cumulative_kcal:  float = 0.0,
     cumulative_protein_g: float = 0.0,
+    crew_state:       Optional[CrewDailyState] = None,
 ) -> DailyResponseSchema:
     """
     Main builder — called by main.py once per sol.
@@ -508,8 +559,53 @@ def build_daily_response(
         for cs in sim.crop_statuses
     ]
 
+    # ── Crew ──────────────────────────────────────────────────────────────────
+    crew_schema = None
+    if crew_state is not None:
+        astronaut_schemas = [
+            AstronautSchema(
+                name                          = a.profile.name,
+                role                          = a.profile.role,
+                age                           = a.profile.age,
+                sex                           = a.profile.sex,
+                weight_kg                     = a.profile.weight_kg,
+                kcal_needed_today             = a.kcal_needed_today,
+                protein_needed_today          = a.protein_needed_today,
+                water_needed_today            = a.water_needed_today,
+                kcal_coverage_pct             = a.kcal_coverage_pct,
+                protein_coverage_pct          = a.protein_coverage_pct,
+                health_status                 = a.health_status,
+                active_conditions             = a.active_conditions,
+                consecutive_low_coverage_sols = a.consecutive_low_coverage_sols,
+                days_on_mission               = a.days_on_mission,
+                total_evas                    = a.total_evas,
+                total_illness_days            = a.total_illness_days,
+                total_injury_days             = a.total_injury_days,
+            )
+            for a in crew_state.astronauts
+        ]
+        crew_schema = CrewSchema(
+            astronauts                  = astronaut_schemas,
+            total_kcal_needed           = crew_state.total_kcal_needed,
+            total_protein_needed        = crew_state.total_protein_needed,
+            total_water_needed          = crew_state.total_water_needed,
+            avg_kcal_coverage           = crew_state.avg_kcal_coverage,
+            min_kcal_coverage           = crew_state.min_kcal_coverage,
+            avg_protein_coverage        = crew_state.avg_protein_coverage,
+            min_protein_coverage        = crew_state.min_protein_coverage,
+            avg_health_score            = crew_state.avg_health_score,
+            crew_need_variance          = crew_state.crew_need_variance,
+            any_in_triage               = crew_state.any_in_triage,
+            triage_astronaut            = crew_state.triage_astronaut,
+            crew_critical               = crew_state.crew_critical,
+            medic_available             = crew_state.medic_available,
+            total_mission_evas          = crew_state.total_mission_evas,
+            total_mission_illness_days  = crew_state.total_mission_illness_days,
+            total_mission_injury_days   = crew_state.total_mission_injury_days,
+        )
+
     # ── Summary string ────────────────────────────────────────────────────────
-    summary = _build_summary(nutrition, resources, reward_schema, agent_state)
+    summary = _build_summary(nutrition, resources, reward_schema, agent_state, crew_state)
 
     return DailyResponseSchema(
         day              = env.day,
@@ -523,6 +619,7 @@ def build_daily_response(
         harvest_events   = [c.value for c in schedule.harvest_events],
         stress_alerts    = alerts,
         crop_statuses    = crop_statuses,
+        crew             = crew_schema,
         summary          = summary,
         mission_day      = env.day,
         days_remaining   = max(mission_duration - env.day, 0),
@@ -543,6 +640,7 @@ def build_mission_summary(
     agent_sols_trained:    int,
     agent_cumulative_reward: float,
     any_critical_today:    bool,
+    crew_state:            Optional[CrewDailyState] = None,
 ) -> MissionSummarySchema:
     """
     Builder for the mission overview panel.
@@ -555,11 +653,23 @@ def build_mission_summary(
 
     # Mission status — simple three-level flag
     if any_critical_today:
-        status = "Critical"
+        status = "critical"
     elif avg_reward < 0.0:
-        status = "Caution"
+        status = "caution"
     else:
-        status = "Nominal"
+        status = "nominal"
+
+    # ── Crew lifetime stats ──────────────────────────────────────────────────
+    healthiest    = None
+    most_at_risk  = None
+    if crew_state is not None:
+        # Healthiest: lowest total illness + injury days
+        sorted_crew = sorted(
+            crew_state.astronauts,
+            key=lambda a: a.total_illness_days + a.total_injury_days
+        )
+        healthiest   = sorted_crew[0].profile.name
+        most_at_risk = sorted_crew[-1].profile.name
 
     return MissionSummarySchema(
         current_day              = current_day,
@@ -579,9 +689,14 @@ def build_mission_summary(
             radish_pct  = current_allocation.radish_pct,
             herb_pct    = current_allocation.herb_pct,
         ),
-        agent_sols_trained       = agent_sols_trained,
-        agent_cumulative_reward  = round(agent_cumulative_reward, 2),
-        mission_status           = status,
+        agent_sols_trained          = agent_sols_trained,
+        agent_cumulative_reward     = round(agent_cumulative_reward, 2),
+        mission_status              = status,
+        total_crew_evas             = crew_state.total_mission_evas          if crew_state else None,
+        total_crew_illness_days     = crew_state.total_mission_illness_days  if crew_state else None,
+        total_crew_injury_days      = crew_state.total_mission_injury_days   if crew_state else None,
+        healthiest_astronaut        = healthiest,
+        most_at_risk_astronaut      = most_at_risk,
     )
 
 
@@ -590,10 +705,11 @@ def build_mission_summary(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _build_summary(
-    nutrition: NutritionSchema,
-    resources: ResourceSchema,
-    reward:    RewardSchema,
-    agent:     AgentState,
+    nutrition:  NutritionSchema,
+    resources:  ResourceSchema,
+    reward:     RewardSchema,
+    agent:      AgentState,
+    crew_state: Optional[CrewDailyState] = None,
 ) -> str:
     """One-line human-readable summary for the dashboard header."""
     parts = []
@@ -614,5 +730,16 @@ def _build_summary(
         parts.append("Agent: warmup")
     else:
         parts.append(f"Agent: sol {agent.total_sols_trained} trained")
+
+    # Crew health summary
+    if crew_state is not None:
+        if crew_state.crew_critical:
+            parts.append("CREW CRITICAL — 2+ members incapacitated")
+        elif crew_state.any_in_triage:
+            parts.append(f"TRIAGE: {crew_state.triage_astronaut}")
+        elif crew_state.avg_health_score < 0.6:
+            parts.append(f"Crew health low ({crew_state.avg_health_score:.0%})")
+        else:
+            parts.append(f"Crew nominal (health {crew_state.avg_health_score:.0%})")
 
     return " | ".join(parts)

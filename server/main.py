@@ -46,14 +46,10 @@ from agent.models import (
     MarsEnvironment,
     default_crop_profiles,
 )
+from agent.crew import generate_crew, update_crew_sol, reset_crew, CrewDailyState
 from agent.planner import plan, DEFAULT_ALLOC
-from agent.reward import (
-    harvest_kcal_history,
-    harvest_protein_history,
-    score as reward_score,
-)
+from agent.reward import score as reward_score
 from agent.rl_agent import GreenhouseAgent, build_observation
-from agent.claude_agent import get_ai_summary   
 from api.schemas import (
     DailyResponseSchema,
     MissionSummarySchema,
@@ -144,48 +140,11 @@ cumulative_protein:  float = 0.0
 cumulative_water_recycled: float = 0.0
 cumulative_yield_kg: float = 0.0
 
-
-def reset_mission_state(seed_first_sol: bool = True) -> Optional[DailyResponseSchema]:
-    """
-    Reset the mutable mission state, agent, and histories to a fresh run.
-    Optionally seeds sol 1 immediately so the frontend always has live data.
-    """
-    global greenhouse_state, active_crops, current_allocation, stock_tracker, agent
-    global cumulative_kcal, cumulative_protein
-    global cumulative_water_recycled, cumulative_yield_kg
-
-    logger.info("Resetting Mars greenhouse mission state.")
-    random.seed(42)
-
-    greenhouse_state = initial_greenhouse_state(total_area_m2=100.0)
-    active_crops = {}
-    current_allocation = DEFAULT_ALLOC
-    stock_tracker = initial_stock_tracker()
-
-    sol_history.clear()
-    reward_history.clear()
-    calorie_history.clear()
-    recycling_history.clear()
-    harvest_kcal_history.clear()
-    harvest_protein_history.clear()
-
-    cumulative_kcal = 0.0
-    cumulative_protein = 0.0
-    cumulative_water_recycled = 0.0
-    cumulative_yield_kg = 0.0
-
-    os.makedirs("data", exist_ok=True)
-    checkpoint_path = os.path.join("data", "agent_checkpoint.json")
-    if os.path.exists(checkpoint_path):
-        os.remove(checkpoint_path)
-        logger.info("Stale checkpoint deleted during reset.")
-
-    agent = GreenhouseAgent(checkpoint_path=checkpoint_path)
-
-    if seed_first_sol:
-        return run_one_sol()
-
-    return None
+# ── Crew state — generated once at startup, updated each sol ─────────────────
+# crew_profiles: 4 AstronautProfile objects fixed for the whole mission
+# crew_state:    CrewDailyState updated every sol with today's health events
+crew_profiles: list = []
+crew_state:    Optional[CrewDailyState] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,7 +162,7 @@ def run_one_sol() -> DailyResponseSchema:
 
     Every line here maps to a node in the workflow diagram.
     """
-    global greenhouse_state, current_allocation
+    global greenhouse_state, current_allocation, crew_state
     global cumulative_kcal, cumulative_protein
     global cumulative_water_recycled, cumulative_yield_kg
 
@@ -263,6 +222,23 @@ def run_one_sol() -> DailyResponseSchema:
     stock_tracker["k_stock_used"]  += resource_status.k_dosed_ppm
     stock_tracker["fe_stock_used"] += resource_status.fe_dosed_ppm
 
+    # ── STEP 4a: crew.py — update astronaut states ──────────────────────────
+    # Run AFTER resources so dynamic crew water consumption is reflected.
+    # Run BEFORE agent observe so crew health enters the RL state vector.
+    # Distributes today's harvested food needs-weighted across the 4 astronauts.
+    # Fires random health events (EVA, illness, injury) using profile probabilities.
+    # Returns CrewDailyState with per-astronaut coverage and crew-level aggregates.
+    crew_state = update_crew_sol(
+        profiles          = crew_profiles,
+        day               = greenhouse_state.day,
+        harvested_kcal    = sim_result.daily_harvested_kcal,
+        harvested_protein = sim_result.daily_harvested_protein_g,
+    )
+
+    # Update dynamic crew water consumption in resources tracker
+    # On EVA days crew uses more water — reflect this for next sol's resource calc
+    stock_tracker["crew_water_today"] = crew_state.total_water_needed
+
     # ── STEP 4: rl_agent.py observe() — agent reads state ────────────────────
     # Build the normalised 6-feature observation vector from this sol's outputs.
     # Agent proposes an AreaAllocation override for the planner.
@@ -271,12 +247,15 @@ def run_one_sol() -> DailyResponseSchema:
     #
     # Why before planner: planner.plan() accepts rl_override as a parameter.
     # The agent's proposed allocation goes straight into that argument.
+    # Pass crew_state so agent sees min_astronaut_coverage, avg_health_score,
+    # crew_need_variance in its 9-feature state vector
     observation = build_observation(
-        sim           = sim_result,
-        res           = resource_status,
-        needs_kcal    = crew_needs.kcal_per_day,
-        needs_protein = crew_needs.protein_g_per_day,
+        sim              = sim_result,
+        res              = resource_status,
+        needs_kcal       = crew_state.total_kcal_needed if crew_state else crew_needs.kcal_per_day,
+        needs_protein    = crew_state.total_protein_needed if crew_state else crew_needs.protein_g_per_day,
         mission_duration = MISSION_DURATION,
+        crew_state       = crew_state,
     )
     rl_allocation = agent.observe(observation, current_allocation)
 
@@ -295,14 +274,25 @@ def run_one_sol() -> DailyResponseSchema:
     # so planner.py doesn't need to know about the richer dict structure.
     simple_active = {ct: data["day_planted"] for ct, data in active_crops.items()}
 
+    # Use dynamic crew needs from crew_state if available.
+    # crew_state.total_kcal_needed varies with EVA days and illness.
+    # Pass crew_state so planner can detect individual astronaut deficits
+    # and enter triage mode when someone is consistently underfed.
+    from agent.models import CrewNutritionNeeds
+    dynamic_needs = CrewNutritionNeeds(
+        kcal_per_day    = crew_state.total_kcal_needed    if crew_state else crew_needs.kcal_per_day,
+        protein_g_per_day = crew_state.total_protein_needed if crew_state else crew_needs.protein_g_per_day,
+    ) if crew_state else crew_needs
+
     daily_schedule = plan(
         state          = greenhouse_state,
-        needs          = crew_needs,
+        needs          = dynamic_needs,
         active_crops   = simple_active,
         stress_reports = sim_result.all_stress_reports,
         current_alloc  = current_allocation,
         rl_override    = rl_allocation,
         profiles       = crop_profiles,
+        crew_state     = crew_state,
     )
 
     # Update current_allocation to what planner decided
@@ -344,11 +334,14 @@ def run_one_sol() -> DailyResponseSchema:
     #
     # Why here: needs all simulation outputs. Nothing upstream of this
     # point needs the reward — it's pure scoring, not decision-making.
+    # Pass crew_state so reward includes individual astronaut coverage equity,
+    # not just crew average. min_kcal_coverage penalises leaving anyone behind.
     reward_signal = reward_score(
-        sim      = sim_result,
-        res      = resource_status,
-        schedule = daily_schedule,
-        needs    = crew_needs,
+        sim        = sim_result,
+        res        = resource_status,
+        schedule   = daily_schedule,
+        needs      = dynamic_needs,
+        crew_state = crew_state,
     )
 
     # ── STEP 7: rl_agent.py update_policy() — agent learns ───────────────────
@@ -375,11 +368,12 @@ def run_one_sol() -> DailyResponseSchema:
         agent_state          = agent_state,
         reward               = reward_signal,
         env                  = greenhouse_state,
-        needs_kcal           = crew_needs.kcal_per_day,
-        needs_protein        = crew_needs.protein_g_per_day,
+        needs_kcal           = dynamic_needs.kcal_per_day,
+        needs_protein        = dynamic_needs.protein_g_per_day,
         mission_duration     = MISSION_DURATION,
         cumulative_kcal      = cumulative_kcal,
         cumulative_protein_g = cumulative_protein,
+        crew_state           = crew_state,
     )
 
     # ── STEP 9: Accumulate history ────────────────────────────────────────────
@@ -436,8 +430,19 @@ async def lifespan(app: FastAPI):
         logger.info("Stale checkpoint deleted — agent will start fresh.")
 
     # Reinitialise agent without old checkpoint
-    global agent
+    global agent, crew_profiles
     agent = GreenhouseAgent(checkpoint_path=checkpoint_path)
+
+    # Generate 4 astronauts for this mission.
+    # Uses a separate random instance so crew randomness is isolated
+    # from the environment simulation — changing crew code won't alter
+    # dust storm timing or PAR values.
+    reset_crew()
+    crew_profiles = generate_crew()
+    logger.info(
+        "Crew generated: %s",
+        " | ".join(f"{p.role}: {p.name}" for p in crew_profiles)
+    )
 
     # Run sol 1 immediately so frontend has something to show
     if not sol_history:
@@ -495,22 +500,6 @@ async def step_simulation(request: SimStepRequestSchema):
     return last_payload
 
 
-@app.post("/api/reset", response_model=DailyResponseSchema)
-async def reset_simulation():
-    """
-    Reset the mission to a fresh state and seed the first sol immediately.
-
-    POST /api/reset
-
-    Returns the seeded sol payload so the frontend can redraw without
-    requiring a manual refresh.
-    """
-    payload = reset_mission_state(seed_first_sol=True)
-    if payload is None:
-        raise HTTPException(status_code=500, detail="Mission reset failed.")
-    return payload
-
-
 @app.get("/api/sol/{day}", response_model=DailyResponseSchema)
 async def get_sol(day: int):
     """
@@ -558,6 +547,7 @@ async def get_mission_summary():
         agent_sols_trained       = agent.sols_trained,
         agent_cumulative_reward  = agent.cumulative_reward,
         any_critical_today       = sol_history[-1].resources.any_critical,
+        crew_state               = crew_state,
     )
 
 
@@ -574,34 +564,3 @@ async def health():
         "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
         "agent_trained":   agent.sols_trained,
     }
-    
-
-
-@app.get("/api/ai-summary")
-async def ai_summary(day: int):
-    """
-    GET /api/ai-summary?day=42
-    Fetches the stored sol payload and passes it to Claude for analysis.
-    Returns a ClaudeRecommendation-shaped JSON object.
-    """
-    if not sol_history:
-        raise HTTPException(status_code=404, detail="No sols run yet.")
-
-    # Clamp to latest available sol rather than hard 404-ing on future days
-    clamped_day = min(max(day, 1), len(sol_history))
-
-    sol_payload = sol_history[clamped_day - 1]
-
-    # sol_history stores DailyResponseSchema Pydantic objects — serialise first
-    raw = sol_payload.model_dump()
-
-    result = get_ai_summary(raw)
-
-    # Surface Claude errors as 502 rather than silently returning empty data
-    if "error" in result:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Claude API error: {result['error']}"
-        )
-
-    return result

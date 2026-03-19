@@ -422,6 +422,7 @@ def plan(
     current_alloc: AreaAllocation    = DEFAULT_ALLOC,
     rl_override: AreaAllocation | None = None,
     profiles: dict[CropType, CropProfile] | None = None,
+    crew_state=None,
 ) -> DailySchedule:
     """
     Main entry point.  Called once per simulated sol by main.py.
