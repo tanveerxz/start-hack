@@ -431,40 +431,24 @@ def run_one_sol() -> DailyResponseSchema:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Runs once at server startup.
-    Seeds the first sol so the frontend has data immediately on load
-    rather than showing an empty dashboard.
+    Lightweight startup for cloud deployment.
 
-    On a fresh start (no sol history, no in-progress simulation):
-      - Deletes any stale checkpoint so the RL agent starts from scratch
-      - This ensures the agent visibly learns during the demo rather than
-        starting already converged from a previous run
-
-    On a restart mid-mission (sol_history would be repopulated from a
-    persistent store in production — for the hackathon we always fresh-start):
-      - Same behaviour: clean agent, clean simulation
+    Avoid running the simulation during startup so the app can become healthy
+    faster on managed platforms like App Runner. The frontend can call
+    /api/reset or /api/step after load.
     """
     logger.info("Mars greenhouse server starting — mission duration: %d sols.", MISSION_DURATION)
     os.makedirs("data", exist_ok=True)
 
-    # Delete stale checkpoint on fresh start so agent learns from sol 1
     checkpoint_path = os.path.join("data", "agent_checkpoint.json")
     if os.path.exists(checkpoint_path):
         os.remove(checkpoint_path)
         logger.info("Stale checkpoint deleted — agent will start fresh.")
 
-    # Reinitialise agent without old checkpoint
-    global agent, crew_profiles, current_crew_state
+    global agent
     agent = GreenhouseAgent(checkpoint_path=checkpoint_path)
-    reset_crew()
-    crew_profiles = generate_crew(mission_seed=42)
-    current_crew_state = None
 
-    # Run sol 1 immediately so frontend has something to show
-    if not sol_history:
-        run_one_sol()
-        logger.info("Sol 0 seeded. Server ready.")
-
+    logger.info("Server ready.")
     yield
     logger.info("Server shutting down.")
 
@@ -482,15 +466,13 @@ allowed_origins = [
     "https://onesigma.vercel.app",
 ]
 
-# ── CORS — allow the Next.js dev server to call this API ─────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = allowed_origins,
-    allow_credentials = True,
-    allow_methods     = ["*"],
-    allow_headers     = ["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
 
 @app.post("/api/step", response_model=DailyResponseSchema)
 async def step_simulation(request: SimStepRequestSchema):
@@ -592,30 +574,40 @@ async def get_mission_summary():
 @app.get("/api/health")
 async def health():
     """
-    Liveness check.
-    GET /api/health → { "status": "ok", "sol": 42 }
-    Frontend polls this to confirm the server is alive.
+    Lightweight liveness/readiness check.
     """
     return {
-        "status":          "ok",
-        "sol":             greenhouse_state.day,
-        "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
-        "agent_trained":   agent.sols_trained,
+        "status": "ok",
+        "mission_duration": MISSION_DURATION,
+        "current_sol": greenhouse_state.day,
+        "has_history": len(sol_history) > 0,
+        "agent_trained": agent.sols_trained,
     }
+
+
+@app.head("/api/health", include_in_schema=False)
+async def health_head():
+    return
 
 
 @app.get("/")
 async def root_health():
     """
-    Default root route for platforms that health-check "/" by default.
-    Mirrors the API health response so deployments don't fail on a 404.
+    Default root route for platform health checks.
+    Keep this lightweight and always 200.
     """
     return {
-        "status":          "ok",
-        "sol":             greenhouse_state.day,
-        "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
-        "agent_trained":   agent.sols_trained,
+        "status": "ok",
+        "service": "Mars Greenhouse API",
+        "mission_duration": MISSION_DURATION,
+        "current_sol": greenhouse_state.day,
+        "has_history": len(sol_history) > 0,
     }
+
+
+@app.head("/", include_in_schema=False)
+async def root_head():
+    return
 
 
 @app.get("/api/ai-summary")
