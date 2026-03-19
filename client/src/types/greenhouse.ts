@@ -189,4 +189,4 @@ export interface TimelinePoint {
   anyCritical: boolean
 }
 
-export type StepSize = 1 | 10 | 50
+export type StepSize = number

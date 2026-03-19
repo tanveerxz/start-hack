@@ -10,6 +10,7 @@ interface AiInsightsPanelProps {
   recommendation: ClaudeRecommendation | null
   loading?: boolean
   error?: string | null
+  onGenerate?: () => void
 }
 
 const riskToneStyles: Record<
@@ -105,6 +106,7 @@ export default function AiInsightsPanel({
   recommendation,
   loading = false,
   error = null,
+  onGenerate,
 }: AiInsightsPanelProps) {
   const riskTone = recommendation
     ? riskToneStyles[recommendation.crew_risk_level]
@@ -125,10 +127,25 @@ export default function AiInsightsPanel({
             </h2>
           </div>
 
-          <div
-            className={`inline-flex rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.22em] ${riskTone.border} ${riskTone.bg} ${riskTone.text}`}
-          >
-            Risk {recommendation?.crew_risk_level ?? 'unknown'}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={!onGenerate || loading}
+              className="rounded-full border border-cyan-400/15 bg-cyan-400/10 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-cyan-100 transition-all duration-300 hover:border-cyan-300/30 hover:bg-cyan-400/16 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading
+                ? 'Generating...'
+                : recommendation
+                  ? 'Regenerate Insights'
+                  : 'Generate AI Insights'}
+            </button>
+
+            <div
+              className={`inline-flex rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.22em] ${riskTone.border} ${riskTone.bg} ${riskTone.text}`}
+            >
+              Risk {recommendation?.crew_risk_level ?? 'unknown'}
+            </div>
           </div>
         </div>
 
@@ -141,7 +158,8 @@ export default function AiInsightsPanel({
             </div>
           ) : !recommendation ? (
             <div className="rounded-[20px] border border-white/10 bg-black/20 p-5 text-sm leading-6 text-white/58">
-              AI recommendations will appear after telemetry for this sol is analyzed.
+              Generate AI insights for this sol to receive recommended next steps, risk
+              assessment, and short-horizon outlook.
             </div>
           ) : (
             <div className="space-y-5">
