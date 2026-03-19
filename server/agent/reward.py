@@ -100,35 +100,60 @@ class RewardSignal:
 # Are the 4 astronauts getting what they need?
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Rolling harvest history — main.py appends daily_harvested_kcal each sol
+# reward.py uses this to score nutrition over a 30-sol window
+# Imported and mutated by main.py
+harvest_kcal_history:    list[float] = []
+harvest_protein_history: list[float] = []
+
+
 def _score_nutrition(
     sim: SimulationResult,
     needs: CrewNutritionNeeds,
 ) -> tuple[float, str]:
     """
-    Scores how well today's projected output meets crew nutritional needs.
+    Scores nutrition based on actual harvested food, not standing crop value.
 
-    Two sub-scores:
-      - Calorie coverage:  projected_kcal / 12,000 kcal target
-      - Protein coverage:  projected_protein / 450g target
+    The crew needs 12,000 kcal/day. The greenhouse produces food in bursts
+    on harvest days. We score using a 30-sol rolling average of harvested
+    kcal — this reflects whether the greenhouse is producing enough food
+    over time to keep the crew fed, which is the agronomically correct metric.
 
-    Combined as a weighted average — calories slightly more important
-    because a calorie deficit is immediately dangerous, protein deficit
-    has a longer lag before it becomes critical.
+    On a non-harvest sol: score reflects recent harvest history.
+    On a harvest sol: that harvest is included in the window.
 
-    Score is capped at 1.0 — overproduction doesn't earn bonus points.
-    The agent shouldn't grow more than needed at the cost of efficiency.
+    This means:
+      Sols 1-21:  low score — no harvests yet, crew on stored food
+      Sol 22+:    score rises as harvests accumulate
+      Sol 71+:    score approaches 1.0 as full rotation kicks in
+
+    The greenhouse supplements stored food — it doesn't replace it entirely.
+    Realistic target is ~40% of daily needs from the greenhouse.
     """
-    calorie_coverage = min(sim.total_projected_kcal    / needs.kcal_per_day,    1.0)
-    protein_coverage = min(sim.total_projected_protein_g / needs.protein_g_per_day, 1.0)
+    # Add today's harvest to history
+    harvest_kcal_history.append(sim.daily_harvested_kcal)
+    harvest_protein_history.append(sim.daily_harvested_protein_g)
+
+    # 30-sol rolling average — smooths out the burst nature of harvests
+    window = 30
+    recent_kcal    = harvest_kcal_history[-window:]
+    recent_protein = harvest_protein_history[-window:]
+    avg_kcal    = sum(recent_kcal)    / len(recent_kcal)
+    avg_protein = sum(recent_protein) / len(recent_protein)
+
+    # Score against daily target — greenhouse provides ~40% realistically
+    # Cap at 1.0 so overproduction doesn't mask inefficiency
+    calorie_coverage = min(avg_kcal    / needs.kcal_per_day,    1.0)
+    protein_coverage = min(avg_protein / needs.protein_g_per_day, 1.0)
 
     # Calorie: 60% weight within nutrition, protein: 40%
     score = (calorie_coverage * 0.60) + (protein_coverage * 0.40)
 
     note = (
-        f"Calories: {calorie_coverage:.0%} of target "
-        f"({sim.total_projected_kcal:.0f}/{needs.kcal_per_day:.0f} kcal) | "
-        f"Protein: {protein_coverage:.0%} of target "
-        f"({sim.total_projected_protein_g:.0f}/{needs.protein_g_per_day:.0f}g)"
+        f"Calories: {calorie_coverage:.0%} of daily target "
+        f"(30-sol avg: {avg_kcal:.0f}/{needs.kcal_per_day:.0f} kcal) | "
+        f"Protein: {protein_coverage:.0%} of daily target "
+        f"(30-sol avg: {avg_protein:.0f}/{needs.protein_g_per_day:.0f}g)"
     )
 
     logger.info("Nutrition score: %.3f | %s", score, note)

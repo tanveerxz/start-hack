@@ -152,8 +152,16 @@ def build_observation(
 
     Clips all values to [0.0, 1.0] — the linear policy assumes this.
     """
-    calorie_coverage = _clip01(sim.total_projected_kcal    / needs_kcal)
-    protein_coverage = _clip01(sim.total_projected_protein_g / needs_protein)
+    # Use 30-sol rolling average from reward history for stable coverage signal
+    # Falls back to standing crop estimate on early sols before first harvest
+    from agent.reward import harvest_kcal_history, harvest_protein_history
+    window = 30
+    recent_kcal    = harvest_kcal_history[-window:] if harvest_kcal_history else [0.0]
+    recent_protein = harvest_protein_history[-window:] if harvest_protein_history else [0.0]
+    avg_kcal    = sum(recent_kcal)    / len(recent_kcal)
+    avg_protein = sum(recent_protein) / len(recent_protein)
+    calorie_coverage = _clip01(avg_kcal    / needs_kcal)
+    protein_coverage = _clip01(avg_protein / needs_protein)
     water_frac       = _clip01(res.water_available_liters  / 500.0)
 
     avg_stress = (
@@ -482,16 +490,26 @@ class GreenhouseAgent:
             current.herb_pct,
         ]
 
+        # Step 1: apply adjustments without clamping yet
         new_pcts = []
         for i, (pct, adj, nse) in enumerate(zip(current_pcts, adjustments, noise)):
-            crop     = CROP_ORDER[i]
-            lo, hi   = ALLOC_LIMITS[crop]
             adjusted = pct + (adj + nse) * SCALE
-            new_pcts.append(_clamp(adjusted, lo, hi))
+            new_pcts.append(adjusted)
 
-        # Renormalise to sum = 1.0
+        # Step 2: renormalise to sum = 1.0
         total = sum(new_pcts)
         new_pcts = [p / total for p in new_pcts]
+
+        # Step 3: clamp AFTER renormalisation so limits are actually respected
+        # Then renormalise again to fix any sum drift from clamping
+        clamped = []
+        for i, pct in enumerate(new_pcts):
+            crop   = CROP_ORDER[i]
+            lo, hi = ALLOC_LIMITS[crop]
+            clamped.append(_clamp(pct, lo, hi))
+
+        total2  = sum(clamped)
+        new_pcts = [p / total2 for p in clamped]
 
         return AreaAllocation(
             potato_pct  = round(new_pcts[0], 4),

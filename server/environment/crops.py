@@ -76,10 +76,16 @@ class SimulationResult:
     crop_statuses: list[CropStatus]
     all_stress_reports: list[PlantStressReport]   # flattened across all crops
 
-    # Aggregated nutrition projection (kg of edible biomass today)
-    total_projected_yield_kg: float
-    total_projected_kcal: float
-    total_projected_protein_g: float
+    # What was actually harvested and eaten today (zero on non-harvest days)
+    daily_harvested_yield_kg: float
+    daily_harvested_kcal: float
+    daily_harvested_protein_g: float
+
+    # Standing crop value — entire field projected value (for forecasting only)
+    # Do NOT use this for nutrition scoring — it overcounts massively
+    standing_crop_kcal: float
+    standing_crop_protein_g: float
+    total_projected_yield_kg: float  # kept for backwards compatibility
 
     # Resource consumption this sol
     water_consumed_liters: float
@@ -510,9 +516,12 @@ def simulate_crops(
     crop_statuses:     list[CropStatus]        = []
     all_stress_reports: list[PlantStressReport] = []
 
-    total_yield_kg    = 0.0
-    total_kcal        = 0.0
-    total_protein_g   = 0.0
+    total_yield_kg          = 0.0
+    total_standing_kcal     = 0.0
+    total_standing_protein  = 0.0
+    total_harvested_kcal    = 0.0
+    total_harvested_protein = 0.0
+    total_harvested_yield   = 0.0
 
     logger.info("--- Sol %d crop simulation (%d active crops) ---",
                 state.day, len(active_crops))
@@ -535,14 +544,30 @@ def simulate_crops(
         new_cumulative = cum_growth + growth_rate
         projected_yield = _project_yield(profile, new_cumulative, days_grown + 1, area_m2)
 
-        # ── Nutrition from this crop today ────────────────────────────────────
-        # Convert projected yield (kg) to nutrition
-        kcal_today    = (projected_yield * 1000 / 100) * profile.kcal_per_100g
-        protein_today = (projected_yield * 1000 / 100) * profile.protein_g_per_100g
-
+        # ── Nutrition accounting ──────────────────────────────────────────────
+        # Standing crop value — what the whole field is worth right now
+        # This is for forecasting only, NOT for daily nutrition scoring
+        standing_kcal    = (projected_yield * 1000 / 100) * profile.kcal_per_100g
+        standing_protein = (projected_yield * 1000 / 100) * profile.protein_g_per_100g
         total_yield_kg  += projected_yield
-        total_kcal      += kcal_today
-        total_protein_g += protein_today
+        total_standing_kcal    += standing_kcal
+        total_standing_protein += standing_protein
+
+        # Harvested today — only counts on actual harvest day
+        # On sol 22 when radish is ready: we get real food
+        # On sol 21 when radish is growing: we get zero food from greenhouse
+        if days_grown >= profile.growth_cycle_days_min:
+            harvested_kcal    = standing_kcal
+            harvested_protein = standing_protein
+            harvested_yield   = projected_yield
+        else:
+            harvested_kcal    = 0.0
+            harvested_protein = 0.0
+            harvested_yield   = 0.0
+
+        total_harvested_kcal    += harvested_kcal
+        total_harvested_protein += harvested_protein
+        total_harvested_yield   += harvested_yield
 
         # ── Harvest readiness ─────────────────────────────────────────────────
         days_to_harvest = max(profile.growth_cycle_days_min - days_grown, 0)
@@ -580,12 +605,15 @@ def simulate_crops(
     )
 
     result = SimulationResult(
-        day                   = state.day,
-        crop_statuses         = crop_statuses,
-        all_stress_reports    = all_stress_reports,
+        day                       = state.day,
+        crop_statuses             = crop_statuses,
+        all_stress_reports        = all_stress_reports,
+        daily_harvested_yield_kg  = round(total_harvested_yield, 2),
+        daily_harvested_kcal      = round(total_harvested_kcal, 1),
+        daily_harvested_protein_g = round(total_harvested_protein, 1),
+        standing_crop_kcal        = round(total_standing_kcal, 1),
+        standing_crop_protein_g   = round(total_standing_protein, 1),
         total_projected_yield_kg  = round(total_yield_kg, 2),
-        total_projected_kcal      = round(total_kcal, 1),
-        total_projected_protein_g = round(total_protein_g, 1),
         water_consumed_liters     = water_used,
         nutrient_n_consumed_ppm   = n_consumed,
         nutrient_k_consumed_ppm   = k_consumed,
@@ -595,8 +623,8 @@ def simulate_crops(
         "Sol %d crop sim complete | yield=%.1fkg | kcal=%.0f | "
         "protein=%.1fg | stress_reports=%d",
         state.day,
-        total_yield_kg, total_kcal,
-        total_protein_g, len(all_stress_reports),
+        total_yield_kg, total_harvested_kcal,
+        total_harvested_protein, len(all_stress_reports),
     )
 
     return result

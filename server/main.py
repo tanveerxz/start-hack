@@ -31,6 +31,7 @@ Frontend hits:
 from __future__ import annotations
 import logging
 import os
+import random
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -61,6 +62,10 @@ from environment.resources import update as resources_update, initial_stock_trac
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Fix the random seed so every run produces the same simulation.
+# Remove or change this number to get a different (but reproducible) run.
+random.seed(42)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -331,8 +336,8 @@ def run_one_sol() -> DailyResponseSchema:
     calorie_history.append(payload.nutrition.calorie_coverage_pct / 100.0)
     recycling_history.append(payload.resources.recycling_ratio)
 
-    cumulative_kcal            += sim_result.total_projected_kcal
-    cumulative_protein         += sim_result.total_projected_protein_g
+    cumulative_kcal            += sim_result.daily_harvested_kcal
+    cumulative_protein         += sim_result.daily_harvested_protein_g
     cumulative_water_recycled  += resource_status.water_recycled_liters
     cumulative_yield_kg        += sim_result.total_projected_yield_kg
 
@@ -340,7 +345,7 @@ def run_one_sol() -> DailyResponseSchema:
         "Sol %d complete | reward=%.4f | kcal=%.0f | recycling=%.0f%% | agent_sol=%d",
         greenhouse_state.day,
         reward_signal.total,
-        sim_result.total_projected_kcal,
+        sim_result.daily_harvested_kcal,
         payload.resources.recycling_ratio * 100,
         agent_state.total_sols_trained,
     )

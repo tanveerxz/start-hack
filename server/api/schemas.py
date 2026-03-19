@@ -214,15 +214,27 @@ class AgentSchema(BaseModel):
 
 class NutritionSchema(BaseModel):
     """
-    Nutrition output projection for this sol.
+    Nutrition output for this sol.
     Frontend: nutrition panel showing calorie and protein coverage bars.
-    This maps to the crew's 12,000 kcal / 450g protein daily targets.
+
+    harvested_kcal / harvested_protein_g — actual food produced today.
+      Zero on non-harvest days. Real number on harvest days.
+      Use these for the daily nutrition bars.
+
+    calorie_coverage_pct / protein_coverage_pct — 30-sol rolling average.
+      Shows the trend: is the greenhouse keeping up with crew needs over time?
+      This is what the reward system scores against.
+
+    standing_crop_kcal — what the entire field is worth right now.
+      Use this for the forecast feature only.
     """
-    projected_kcal:          float
-    projected_protein_g:     float
-    calorie_coverage_pct:    float   # projected / 12000 as percentage
-    protein_coverage_pct:    float   # projected / 450 as percentage
-    total_yield_kg:          float
+    harvested_kcal:          float   # food actually produced today
+    harvested_protein_g:     float   # protein actually produced today
+    calorie_coverage_pct:    float   # 30-sol rolling avg vs 12000 kcal target
+    protein_coverage_pct:    float   # 30-sol rolling avg vs 450g target
+    total_yield_kg:          float   # total field yield today
+    standing_crop_kcal:      float   # entire field value (for forecasting)
+    is_harvest_day:          bool    # true if any crop was harvested today
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -358,16 +370,22 @@ def build_daily_response(
     )
 
     # ── Nutrition ─────────────────────────────────────────────────────────────
+    # 30-sol rolling average from reward.py history
+    from agent.reward import harvest_kcal_history, harvest_protein_history
+    window = 30
+    recent_kcal    = harvest_kcal_history[-window:]
+    recent_protein = harvest_protein_history[-window:]
+    avg_kcal    = sum(recent_kcal)    / len(recent_kcal)    if recent_kcal    else 0.0
+    avg_protein = sum(recent_protein) / len(recent_protein) if recent_protein else 0.0
+
     nutrition = NutritionSchema(
-        projected_kcal       = sim.total_projected_kcal,
-        projected_protein_g  = sim.total_projected_protein_g,
-        calorie_coverage_pct = round(
-            min(sim.total_projected_kcal / needs_kcal, 1.0) * 100, 1
-        ),
-        protein_coverage_pct = round(
-            min(sim.total_projected_protein_g / needs_protein, 1.0) * 100, 1
-        ),
+        harvested_kcal       = sim.daily_harvested_kcal,
+        harvested_protein_g  = sim.daily_harvested_protein_g,
+        calorie_coverage_pct = round(min(avg_kcal    / needs_kcal,    1.0) * 100, 1),
+        protein_coverage_pct = round(min(avg_protein / needs_protein, 1.0) * 100, 1),
         total_yield_kg       = sim.total_projected_yield_kg,
+        standing_crop_kcal   = sim.standing_crop_kcal,
+        is_harvest_day       = sim.daily_harvested_kcal > 0,
     )
 
     # ── Resources ─────────────────────────────────────────────────────────────
