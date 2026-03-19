@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 import HeroOverlay from '@/components/HeroOverlay'
 import { useScrollProgress } from '@/hooks/useScrollProgress'
-import './landing.css'
+import styles from './landing.module.css'
 
 const MarsScene = dynamic(() => import('@/components/MarsScene'), { ssr: false })
 
@@ -33,7 +33,7 @@ export default function Home() {
         onInitiate={handleInitiate}
       />
 
-      <div className="relative z-0" style={{ height: '720vh' }} />
+      <div className={`${styles.routeSpacer} relative z-0`} />
     </>
   )
 }

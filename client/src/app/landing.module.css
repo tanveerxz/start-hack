@@ -1,0 +1,352 @@
+.routeSpacer {
+  height: 720vh;
+}
+
+.canvasContainer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.ambientOverlay {}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.22) 72%, rgba(0, 0, 0, 0.46) 100%);
+  pointer-events: none;
+}
+
+.noiseOverlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.6) 0.4px, transparent 0.4px);
+  background-size: 8px 8px;
+  mix-blend-mode: soft-light;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 8px 30px rgba(0,0,0,0.22);
+}
+
+.glassHover {
+  transition:
+    transform 450ms ease,
+    background 450ms ease,
+    border-color 450ms ease,
+    box-shadow 450ms ease;
+}
+
+.glassHover:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    0 0 0 1px rgba(196,106,45,0.12),
+    0 10px 36px rgba(196,106,45,0.12);
+}
+
+.typeBrand {
+  font-size: 0.9rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.95);
+}
+
+.typeDisplay {
+  font-size: clamp(2.9rem, 7vw, 7.2rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+  color: rgba(255,255,255,0.98);
+  text-wrap: balance;
+}
+
+.typeEditorial {
+  font-size: clamp(0.98rem, 1.4vw, 1.15rem);
+  line-height: 1.7;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
+}
+
+.typeEditorialSmall {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  font-weight: 400;
+  color: rgba(255,255,255,0.62);
+}
+
+.typeMono,
+.typeMonoBright {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.typeMono {
+  color: rgba(255,255,255,0.44);
+}
+
+.typeMonoBright {
+  color: rgba(255,255,255,0.74);
+}
+
+.typeButton {
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.82);
+}
+
+.scanBracket {
+  width: 44px;
+  height: 44px;
+  opacity: 0.8;
+}
+
+.scanBracket::before,
+.scanBracket::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 218, 194, 0.7);
+  box-shadow: 0 0 18px rgba(196,106,45,0.08);
+}
+
+.scanBracketTl::before,
+.scanBracketBl::before,
+.scanBracketTr::before,
+.scanBracketBr::before {
+  width: 22px;
+  height: 1px;
+}
+
+.scanBracketTl::after,
+.scanBracketBl::after,
+.scanBracketTr::after,
+.scanBracketBr::after {
+  width: 1px;
+  height: 22px;
+}
+
+.scanBracketTl::before {
+  top: 0;
+  left: 0;
+}
+
+.scanBracketTl::after {
+  top: 0;
+  left: 0;
+}
+
+.scanBracketTr::before {
+  top: 0;
+  right: 0;
+}
+
+.scanBracketTr::after {
+  top: 0;
+  right: 0;
+}
+
+.scanBracketBl::before {
+  bottom: 0;
+  left: 0;
+}
+
+.scanBracketBl::after {
+  bottom: 0;
+  left: 0;
+}
+
+.scanBracketBr::before {
+  bottom: 0;
+  right: 0;
+}
+
+.scanBracketBr::after {
+  bottom: 0;
+  right: 0;
+}
+
+@keyframes pulseSlow {
+  0%, 100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.animatePulseSlow {
+  animation: pulseSlow 2.4s ease-in-out infinite;
+}
+
+.storyCta {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 260ms ease, opacity 260ms ease;
+}
+
+.storyCta:hover {
+  transform: translateY(-1px);
+}
+
+.storyCtaTop {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.38);
+  transition: color 240ms ease;
+}
+
+.storyCtaMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: min(28rem, 78vw);
+}
+
+.storyCtaLabel {
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: rgba(255,255,255,0.94);
+  white-space: nowrap;
+  transition: color 240ms ease;
+}
+
+.storyCtaLine {
+  position: relative;
+  top: 1px;
+  flex: 1;
+  height: 1px;
+  min-width: 3rem;
+  background: linear-gradient(
+    90deg,
+    rgba(196,106,45,0.85) 0%,
+    rgba(255,255,255,0.18) 42%,
+    rgba(255,255,255,0.04) 100%
+  );
+  transform-origin: left center;
+  transition: transform 320ms ease, opacity 320ms ease;
+  opacity: 0.88;
+}
+
+.storyCtaIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: rgba(255,255,255,0.72);
+  transition: transform 260ms ease, color 260ms ease;
+}
+
+.storyCtaSub {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.42);
+  transition: color 240ms ease;
+}
+
+.storyCta:hover .storyCtaTop {
+  color: rgba(255,255,255,0.5);
+}
+
+.storyCta:hover .storyCtaLabel {
+  color: rgba(255,255,255,1);
+}
+
+.storyCta:hover .storyCtaLine {
+  transform: scaleX(1.06);
+  opacity: 1;
+}
+
+.storyCta:hover .storyCtaIcon {
+  transform: translateX(3px) translateY(-1px);
+  color: rgba(255,255,255,0.96);
+}
+
+.storyCta:hover .storyCtaSub {
+  color: rgba(255,255,255,0.56);
+}
+
+.storyCta:focus-visible {
+  outline: none;
+}
+
+.storyCta:focus-visible .storyCtaMain {
+  box-shadow: 0 0 0 4px rgba(196,106,45,0.16);
+  border-radius: 999px;
+}
+
+.hudPanel {}
+
+.targetBadge {}
+
+.telemetryLine {}
+
+.statusDot {}
+
+.scanGrid {}
+
+.scrollCueLine {}
+
+@media (max-width: 768px) {
+  .typeDisplay {
+    font-size: clamp(2rem, 10vw, 3.4rem);
+    letter-spacing: -0.03em;
+  }
+
+  .typeEditorial {
+    font-size: 0.92rem;
+  }
+
+  .storyCta {
+    width: 100%;
+  }
+
+  .storyCtaMain {
+    min-width: 0;
+    width: 100%;
+    gap: 0.7rem;
+  }
+
+  .storyCtaLabel {
+    font-size: 0.98rem;
+    white-space: normal;
+  }
+
+  .storyCtaSub {
+    font-size: 0.72rem;
+  }
+}
