@@ -12,6 +12,7 @@ import SimulationControls from '@/components/dashboard/SimulationControls'
 import DashboardTabs, { type DashboardTab } from '@/components/dashboard/DashboardTabs'
 import MissionTrendPanel from '@/components/dashboard/MissionTrendPanel'
 import StatusFeedPanel from '@/components/dashboard/StatusFeedPanel'
+import AiInsightsPanel from '@/components/dashboard/AiInsightsPanel'
 import { useMissionControl } from '@/hooks/useMissionControl'
 import styles from './index.module.css'
 
@@ -29,6 +30,9 @@ export default function DashboardPage() {
     pendingStepCount,
     missionComplete,
     error,
+    currentRecommendation,
+    currentRecommendationLoading,
+    currentRecommendationError,
     runStep,
   } = useMissionControl()
 
@@ -131,11 +135,18 @@ export default function DashboardPage() {
               <KpiGrid sol={selectedSol} />
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.8fr)] 2xl:gap-6">
                 <MissionTrendPanel sol={selectedSol} />
-                <StatusFeedPanel
-                  title="Mission Activity"
-                  eyebrow="Live Signals"
-                  items={statusItems}
-                />
+                <div className="grid gap-4">
+                  <StatusFeedPanel
+                    title="Mission Activity"
+                    eyebrow="Live Signals"
+                    items={statusItems}
+                  />
+                  <AiInsightsPanel
+                    recommendation={currentRecommendation}
+                    loading={currentRecommendationLoading}
+                    error={currentRecommendationError}
+                  />
+                </div>
               </div>
 
               <div className="grid gap-4 xl:grid-cols-2 2xl:gap-6">

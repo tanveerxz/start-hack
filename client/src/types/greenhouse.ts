@@ -118,6 +118,28 @@ export interface CropStatus {
   stress_count: number
 }
 
+export type RecommendationPriority = 'low' | 'medium' | 'high' | 'critical'
+
+export type CrewRiskLevel = 'low' | 'medium' | 'high' | 'unknown'
+
+export interface ClaudeNextStep {
+  id: string
+  action: string
+  priority: RecommendationPriority
+  rationale: string
+}
+
+export interface ClaudeRecommendation {
+  generated_for_day: number
+  status_summary: string
+  next_steps: ClaudeNextStep[]
+  warnings: string[]
+  outlook: string
+  crew_risk_level: CrewRiskLevel
+  confidence: number | null
+  is_fallback: boolean
+}
+
 export interface DailyResponse {
   day: number
   environment: EnvironmentData
