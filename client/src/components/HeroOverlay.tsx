@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { gsap } from 'gsap'
 import { useRouter } from 'next/navigation'
+import styles from '../app/landing.module.css'
 
 interface PhaseData {
   eyebrow: string
@@ -197,9 +198,9 @@ export default function HeroOverlay({
       ref={containerRef}
       className="pointer-events-none fixed inset-0 z-10 select-none overflow-hidden"
     >
-      <div className="ambient-overlay" />
-      <div className="vignette" />
-      <div className="noise-overlay" />
+      <div className={styles.ambientOverlay} />
+      <div className={styles.vignette} />
+      <div className={styles.noiseOverlay} />
 
       <div
         className="absolute inset-0 opacity-70"
@@ -219,11 +220,11 @@ export default function HeroOverlay({
           transform: `translate3d(${mx * 3}px, ${my * 2}px, 0)`,
         }}
       >
-        <div className="hud-panel px-4 py-3 md:px-5 md:py-4">
-          <p className="type-brand">ARES HARVEST</p>
+        <div className={`${styles.hudPanel} px-4 py-3 md:px-5 md:py-4`}>
+          <p className={styles.typeBrand}>ARES HARVEST</p>
           <div className="mt-2 flex items-center gap-2.5">
             <div className="h-px w-6 bg-[#c46a2d]/45" />
-            <p className="type-mono">Autonomous Mars Agriculture</p>
+            <p className={styles.typeMono}>Autonomous Mars Agriculture</p>
           </div>
         </div>
       </div>
@@ -238,7 +239,7 @@ export default function HeroOverlay({
       >
         <div className="flex items-center gap-3">
           <div className="h-px w-10 bg-white/10" />
-          <p className="type-mono opacity-65">MARS GREENHOUSE MISSION</p>
+          <p className={`${styles.typeMono} opacity-65`}>MARS GREENHOUSE MISSION</p>
         </div>
       </div>
 
@@ -260,7 +261,7 @@ export default function HeroOverlay({
             }}
           >
             <div className="h-px w-8 bg-[#c46a2d]/55" />
-            <p className="type-mono-bright">{phase.eyebrow}</p>
+            <p className={styles.typeMonoBright}>{phase.eyebrow}</p>
           </div>
 
           <div className="relative">
@@ -273,7 +274,7 @@ export default function HeroOverlay({
               }}
             />
             <h1
-              className="type-display relative max-w-[12ch] text-balance"
+              className={`${styles.typeDisplay} relative max-w-[12ch] text-balance`}
               style={{
                 opacity: currentOp,
                 transform: `translate3d(0, ${(1 - currentOp) * 20}px, 0)`,
@@ -285,7 +286,7 @@ export default function HeroOverlay({
           </div>
 
           <p
-            className="type-editorial mt-5 max-w-[35rem] text-white/78 md:mt-6"
+            className={`${styles.typeEditorial} mt-5 max-w-[35rem] text-white/78 md:mt-6`}
             style={{
               opacity: Math.max(0.3, currentOp * 0.95),
               transform: `translate3d(0, ${(1 - currentOp) * 12}px, 0)`,
@@ -305,34 +306,24 @@ export default function HeroOverlay({
           >
             <button
               onClick={handleCTA}
-              className="pointer-events-auto group relative isolate overflow-hidden rounded-2xl border border-white/14 bg-[rgba(8,10,16,0.64)] px-4 py-3 text-left backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/22 hover:bg-[rgba(10,12,18,0.74)] active:translate-y-0 md:min-w-[220px] md:px-5 md:py-4"
+              className={`${styles.storyCta} pointer-events-auto group`}
               aria-label={buttonMeta.label}
             >
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.03))]" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(196,106,45,0.28),transparent_42%)] opacity-95" />
-              <div className="absolute inset-[1px] rounded-[15px] border border-white/6" />
+              <span className={styles.storyCtaTop}>
+                {isFinalPhase ? 'Mission Access' : 'Continue Story'}
+              </span>
 
-              <div className="relative flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                    {isFinalPhase ? 'Mission Access' : 'Continue Story'}
-                  </p>
-                  <p className="mt-2 text-[15px] font-semibold tracking-[-0.03em] text-white md:text-base">
-                    {buttonMeta.label}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-white/52">
-                    {buttonMeta.sub}
-                  </p>
-                </div>
+              <span className={styles.storyCtaMain}>
+                <span className={styles.storyCtaLabel}>{buttonMeta.label}</span>
+                <span className={styles.storyCtaLine} />
+                <span className={styles.storyCtaIcon}>↗</span>
+              </span>
 
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/88 transition-transform duration-300 group-hover:translate-x-0.5">
-                  <span className="text-base leading-none">→</span>
-                </div>
-              </div>
+              <span className={styles.storyCtaSub}>{buttonMeta.sub}</span>
             </button>
 
-            <span className="target-badge">Sector A-13</span>
-            <span className="target-badge hidden sm:inline-flex">
+            <span className={styles.targetBadge}>Sector A-13</span>
+            <span className={`${styles.targetBadge} hidden sm:inline-flex`}>
               Closed Loop Habitat
             </span>
           </div>
@@ -345,7 +336,7 @@ export default function HeroOverlay({
             }}
           >
             <div className="h-px w-16 bg-white/10" />
-            <p className="type-mono opacity-60">
+            <p className={`${styles.typeMono} opacity-60`}>
               Food production, resource control, and autonomous response.
             </p>
           </div>
@@ -370,10 +361,10 @@ export default function HeroOverlay({
           </div>
 
           <div className="max-w-[16rem]">
-            <p className="mb-2 type-mono-bright opacity-80">0{idx + 1} / 05</p>
+            <p className={`mb-2 ${styles.typeMonoBright} opacity-80`}>0{idx + 1} / 05</p>
 
             <p
-              className="type-editorial-small leading-relaxed text-white/88"
+              className={`${styles.typeEditorialSmall} leading-relaxed text-white/88`}
               style={{
                 opacity: currentOp,
                 transform: `translate3d(0, ${(1 - currentOp) * 10}px, 0)`,
@@ -387,7 +378,7 @@ export default function HeroOverlay({
               {phase.telemetry.map((line, i) => (
                 <p
                   key={`${idx}-${line}`}
-                  className="type-mono telemetry-line opacity-60"
+                  className={`${styles.typeMono} ${styles.telemetryLine} opacity-60`}
                   style={{
                     opacity: Math.max(0.35, currentOp * (0.82 - i * 0.08)),
                     transform: `translate3d(0, ${(1 - currentOp) * (8 + i * 3)}px, 0)`,
@@ -401,7 +392,7 @@ export default function HeroOverlay({
 
             <div className="mt-5 flex items-center gap-2">
               <div className="h-[1px] w-10 bg-white/10" />
-              <p className="type-mono opacity-45">Live mission thread</p>
+              <p className={`${styles.typeMono} opacity-45`}>Live mission thread</p>
             </div>
           </div>
         </div>
@@ -416,9 +407,9 @@ export default function HeroOverlay({
         }}
       >
         <div className="flex items-center justify-between">
-          <p className="type-mono-bright">0{idx + 1} / 05</p>
+          <p className={styles.typeMonoBright}>0{idx + 1} / 05</p>
           <div className="mx-3 h-px flex-1 bg-white/10" />
-          <p className="type-mono opacity-60">{phase.telemetry[0]}</p>
+          <p className={`${styles.typeMono} opacity-60`}>{phase.telemetry[0]}</p>
         </div>
       </div>
 
@@ -430,13 +421,13 @@ export default function HeroOverlay({
           transition: 'opacity 240ms linear, transform 240ms linear',
         }}
       >
-        <div className="hud-panel px-4 py-3 md:px-5 md:py-4">
+        <div className={`${styles.hudPanel} px-4 py-3 md:px-5 md:py-4`}>
           <div className="flex items-center gap-2" style={{ opacity: phasePresence }}>
             <div
-              className="status-dot animate-pulse-slow"
+              className={`${styles.statusDot} ${styles.animatePulseSlow}`}
               style={{ backgroundColor: idx >= 3 ? '#c46a2d' : '#7fae6a' }}
             />
-            <p className="type-mono">{phase.status}</p>
+            <p className={styles.typeMono}>{phase.status}</p>
           </div>
 
           <div
@@ -446,9 +437,9 @@ export default function HeroOverlay({
               transition: 'opacity 220ms linear',
             }}
           >
-            <p className="type-mono telemetry-line">Crew Capacity: 4</p>
-            <p className="type-mono telemetry-line">Mission Duration: 450 Sols</p>
-            <p className="type-mono telemetry-line">Autonomous planning active</p>
+            <p className={`${styles.typeMono} ${styles.telemetryLine}`}>Crew Capacity: 4</p>
+            <p className={`${styles.typeMono} ${styles.telemetryLine}`}>Mission Duration: 450 Sols</p>
+            <p className={`${styles.typeMono} ${styles.telemetryLine}`}>Autonomous planning active</p>
           </div>
         </div>
       </div>
@@ -462,9 +453,9 @@ export default function HeroOverlay({
         }}
       >
         <div className="flex flex-col items-end gap-1">
-          <p className="type-mono opacity-45">Terrain resolution / 0.4m px</p>
-          <p className="type-mono opacity-45">Atmospheric pressure / 610 Pa</p>
-          <p className="type-mono opacity-45">Surface temperature / -63 C avg</p>
+          <p className={`${styles.typeMono} opacity-45`}>Terrain resolution / 0.4m px</p>
+          <p className={`${styles.typeMono} opacity-45`}>Atmospheric pressure / 610 Pa</p>
+          <p className={`${styles.typeMono} opacity-45`}>Surface temperature / -63 C avg</p>
         </div>
       </div>
 
@@ -476,16 +467,16 @@ export default function HeroOverlay({
           transition: 'opacity 260ms linear',
         }}
       >
-        <div className="scan-grid absolute inset-[10%]" />
-        <div className="scan-bracket scan-bracket--tl absolute left-0 top-0" />
-        <div className="scan-bracket scan-bracket--tr absolute right-0 top-0" />
-        <div className="scan-bracket scan-bracket--bl absolute bottom-0 left-0" />
-        <div className="scan-bracket scan-bracket--br absolute bottom-0 right-0" />
+        <div className={`${styles.scanGrid} absolute inset-[10%]`} />
+        <div className={`${styles.scanBracket} ${styles.scanBracketTl} absolute left-0 top-0`} />
+        <div className={`${styles.scanBracket} ${styles.scanBracketTr} absolute right-0 top-0`} />
+        <div className={`${styles.scanBracket} ${styles.scanBracketBl} absolute bottom-0 left-0`} />
+        <div className={`${styles.scanBracket} ${styles.scanBracketBr} absolute bottom-0 right-0`} />
 
-        <p className="type-mono absolute -top-6 left-10 opacity-60">
+        <p className={`${styles.typeMono} absolute -top-6 left-10 opacity-60`}>
           Agricultural habitat / live scan
         </p>
-        <p className="type-mono absolute -bottom-6 right-10 opacity-50">
+        <p className={`${styles.typeMono} absolute -bottom-6 right-10 opacity-50`}>
           Descent corridor stabilising
         </p>
       </div>
@@ -497,12 +488,12 @@ export default function HeroOverlay({
           transition: 'opacity 800ms ease',
         }}
       >
-        <div className="hud-panel px-4 py-2.5">
+        <div className={`${styles.hudPanel} px-4 py-2.5`}>
           <p className="text-[9px] uppercase tracking-[0.16em] text-white/56">
             Scroll to begin descent
           </p>
         </div>
-        <div className="scroll-cue-line animate-pulse-slow" />
+        <div className={`${styles.scrollCueLine} ${styles.animatePulseSlow}`} />
       </div>
     </div>
   )

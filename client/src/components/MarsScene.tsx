@@ -5,6 +5,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import CameraRig from './CameraRig'
+import styles from '../app/landing.module.css'
 
 const MARS_POS = new THREE.Vector3(0.7, -0.1, 0)
 const MARS_RADIUS = 1.5
@@ -797,7 +798,7 @@ interface MarsSceneProps {
 
 export default function MarsScene({ scrollProgress, mouse }: MarsSceneProps) {
   return (
-    <div className="canvas-container">
+    <div className={styles.canvasContainer}>
       <Canvas
         camera={{ position: [0, 0.5, 9.4], fov: 45 }}
         gl={{ antialias: true, alpha: false }}
