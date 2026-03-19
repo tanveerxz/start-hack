@@ -40,6 +40,7 @@ export default function KpiGrid({ sol }: KpiGridProps) {
   const activeStressCount = sol?.stress_alerts.length ?? 0
   const readyToHarvest =
     sol?.crop_statuses.filter((crop) => crop.ready_to_harvest).length ?? 0
+  const recyclingRatioPct = sol ? sol.resources.recycling_ratio * 100 : 0
 
   const items: KpiItem[] = [
     {
@@ -67,10 +68,10 @@ export default function KpiGrid({ sol }: KpiGridProps) {
     },
     {
       label: 'Recycling Ratio',
-      value: sol ? `${sol.resources.recycling_ratio.toFixed(1)}%` : '-',
+      value: sol ? `${recyclingRatioPct.toFixed(1)}%` : '-',
       sub: 'Closed-loop water efficiency',
       tooltip: 'Share of consumed water recovered into the loop during the active sol.',
-      progress: sol?.resources.recycling_ratio ?? 0,
+      progress: recyclingRatioPct,
     },
     {
       label: 'Total Yield',
