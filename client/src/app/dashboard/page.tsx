@@ -18,6 +18,7 @@ import PlannerPanel from '@/components/dashboard/PlannerPanel'
 import CropStatusPanel from '@/components/dashboard/CropStatusPanel'
 import RewardBreakdownPanel from '@/components/dashboard/RewardBreakdownPanel'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
+import CrewPanel from '@/components/dashboard/CrewPanel'
 import { useMissionControl } from '@/hooks/useMissionControl'
 import styles from './index.module.css'
 
@@ -75,6 +76,19 @@ export default function DashboardPage() {
         label: 'Nutrition',
         value: `${selectedSol.nutrition.calorie_coverage_pct.toFixed(1)}% calorie coverage / ${selectedSol.nutrition.protein_coverage_pct.toFixed(1)}% protein coverage`,
         tone: 'default' as const,
+      },
+      {
+        label: 'Crew',
+        value: selectedSol.crew?.crew_critical
+          ? 'Crew critical state detected'
+          : selectedSol.crew?.any_in_triage
+            ? `Triage active for ${selectedSol.crew.triage_astronaut ?? 'one astronaut'}`
+            : 'Four astronauts nominal',
+        tone: selectedSol.crew?.crew_critical
+          ? ('danger' as const)
+          : selectedSol.crew?.any_in_triage
+            ? ('warning' as const)
+            : ('success' as const),
       },
     ]
   }, [selectedSol])
@@ -164,6 +178,13 @@ export default function DashboardPage() {
                 />
               </div>
 
+              <CrewPanel
+                crew={selectedSol.crew}
+                missionSummary={missionSummary}
+                nutrition={selectedSol.nutrition}
+                day={selectedSol.day}
+              />
+
               <div className="grid gap-4 xl:grid-cols-2 2xl:gap-6">
                 <AllocationPanel
                   allocation={selectedSol.allocation}
@@ -231,6 +252,13 @@ export default function DashboardPage() {
                   ]}
                 />
               </div>
+
+              <CrewPanel
+                crew={selectedSol.crew}
+                missionSummary={missionSummary}
+                nutrition={selectedSol.nutrition}
+                day={selectedSol.day}
+              />
 
               <div className="grid gap-4 xl:grid-cols-2 2xl:gap-6">
                 <AllocationPanel

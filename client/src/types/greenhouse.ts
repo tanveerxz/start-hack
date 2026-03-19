@@ -27,11 +27,15 @@ export interface EnvironmentData {
 }
 
 export interface NutritionData {
-  projected_kcal: number
-  projected_protein_g: number
+  harvested_kcal: number
+  harvested_protein_g: number
   calorie_coverage_pct: number
   protein_coverage_pct: number
   total_yield_kg: number
+  standing_crop_kcal: number
+  is_harvest_day: boolean
+  cumulative_kcal: number
+  cumulative_protein_g: number
 }
 
 export interface ResourceData {
@@ -118,6 +122,46 @@ export interface CropStatus {
   stress_count: number
 }
 
+export interface Astronaut {
+  name: string
+  role: string
+  age: number
+  sex: string
+  weight_kg: number
+  kcal_needed_today: number
+  protein_needed_today: number
+  water_needed_today: number
+  kcal_coverage_pct: number
+  protein_coverage_pct: number
+  health_status: string
+  active_conditions: string[]
+  consecutive_low_coverage_sols: number
+  days_on_mission: number
+  total_evas: number
+  total_illness_days: number
+  total_injury_days: number
+}
+
+export interface CrewData {
+  astronauts: Astronaut[]
+  total_kcal_needed: number
+  total_protein_needed: number
+  total_water_needed: number
+  avg_kcal_coverage: number
+  min_kcal_coverage: number
+  avg_protein_coverage: number
+  min_protein_coverage: number
+  avg_health_score: number
+  crew_need_variance: number
+  any_in_triage: boolean
+  triage_astronaut: string | null
+  crew_critical: boolean
+  medic_available: boolean
+  total_mission_evas: number
+  total_mission_illness_days: number
+  total_mission_injury_days: number
+}
+
 export type RecommendationPriority = 'low' | 'medium' | 'high' | 'critical'
 
 export type CrewRiskLevel = 'low' | 'medium' | 'high' | 'unknown'
@@ -152,6 +196,7 @@ export interface DailyResponse {
   harvest_events: string[]
   stress_alerts: StressAlert[]
   crop_statuses: CropStatus[]
+  crew: CrewData | null
   summary: string
   mission_day: number
   days_remaining: number
@@ -172,6 +217,11 @@ export interface MissionSummary {
   agent_sols_trained: number
   agent_cumulative_reward: number
   mission_status: 'nominal' | 'caution' | 'critical'
+  total_crew_evas: number | null
+  total_crew_illness_days: number | null
+  total_crew_injury_days: number | null
+  healthiest_astronaut: string | null
+  most_at_risk_astronaut: string | null
 }
 
 export interface StepRequest {
