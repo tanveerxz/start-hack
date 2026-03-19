@@ -170,11 +170,17 @@ def _apply_humidity_control(current: float, drift: float) -> float:
     """
     Humidifier/dehumidifier: push toward TARGET_HUMIDITY_RH.
     Humidity control is low power — not modelled as power-limited.
+
+    Uses same 85% proportional control as temp/CO2 — leaves natural
+    residual variation of ±1-2% RH rather than locking at exactly 60%.
     """
+    CONTROL_EFFICIENCY = 0.85
     raw        = current + drift
     error      = TARGET_HUMIDITY_RH - raw
-    correction = _clamp(error, -MAX_HUMIDITY_CORRECTION, MAX_HUMIDITY_CORRECTION)
-    return round(_clamp(raw + correction, 0.0, 100.0), 1)
+    correction = _clamp(error, -MAX_HUMIDITY_CORRECTION, MAX_HUMIDITY_CORRECTION) * CONTROL_EFFICIENCY
+    # Small sensor noise — real humidity sensors have ±0.5% RH imprecision
+    sensor_noise = random.gauss(0, 0.5)
+    return round(_clamp(raw + correction + sensor_noise, 0.0, 100.0), 1)
 
 
 def _apply_co2_control(current: float, drift: float, power_available: float) -> tuple[float, float]:
