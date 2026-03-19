@@ -4,7 +4,7 @@
 
 ### Autonomous Martian Greenhouse · START HACK 2026
 
-*Feeding 4 astronauts across 450 sols on the surface of Mars*
+Feeding 4 astronauts across 450 sols on the surface of Mars
 
 ![Next.js](https://img.shields.io/badge/Next.js_15-black?style=for-the-badge&logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
