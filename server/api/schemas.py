@@ -228,13 +228,15 @@ class NutritionSchema(BaseModel):
     standing_crop_kcal — what the entire field is worth right now.
       Use this for the forecast feature only.
     """
-    harvested_kcal:          float   # food actually produced today
+    harvested_kcal:          float   # food actually produced today (0 on non-harvest days)
     harvested_protein_g:     float   # protein actually produced today
     calorie_coverage_pct:    float   # 30-sol rolling avg vs 12000 kcal target
     protein_coverage_pct:    float   # 30-sol rolling avg vs 450g target
     total_yield_kg:          float   # total field yield today
     standing_crop_kcal:      float   # entire field value (for forecasting)
     is_harvest_day:          bool    # true if any crop was harvested today
+    cumulative_kcal:         float   # total kcal harvested since mission start
+    cumulative_protein_g:    float   # total protein harvested since mission start
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -328,15 +330,17 @@ class SimStepRequestSchema(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_daily_response(
-    schedule:     DailySchedule,
-    sim:          SimulationResult,
-    res:          ResourceStatus,
-    agent_state:  AgentState,
-    reward:       RewardSignal,
-    env:          GreenhouseState,
-    needs_kcal:   float = 12000.0,
-    needs_protein: float = 450.0,
-    mission_duration: int = 450,
+    schedule:         DailySchedule,
+    sim:              SimulationResult,
+    res:              ResourceStatus,
+    agent_state:      AgentState,
+    reward:           RewardSignal,
+    env:              GreenhouseState,
+    needs_kcal:       float = 12000.0,
+    needs_protein:    float = 450.0,
+    mission_duration: int   = 450,
+    cumulative_kcal:  float = 0.0,
+    cumulative_protein_g: float = 0.0,
 ) -> DailyResponseSchema:
     """
     Main builder — called by main.py once per sol.
@@ -386,12 +390,18 @@ def build_daily_response(
         total_yield_kg       = sim.total_projected_yield_kg,
         standing_crop_kcal   = sim.standing_crop_kcal,
         is_harvest_day       = sim.daily_harvested_kcal > 0,
+        cumulative_kcal      = round(cumulative_kcal, 1),
+        cumulative_protein_g = round(cumulative_protein_g, 1),
     )
 
     # ── Resources ─────────────────────────────────────────────────────────────
-    recycling_ratio = (
+    # Cap at 1.0 — physically impossible to recycle more than consumed.
+    # On early sols with no active crops, condensate streams can exceed
+    # the small crew-only consumption, producing a ratio > 1.0 without the cap.
+    recycling_ratio = min(
         res.water_recycled_liters / res.water_consumed_liters
-        if res.water_consumed_liters > 0 else 1.0
+        if res.water_consumed_liters > 0 else 1.0,
+        1.0
     )
     resources = ResourceSchema(
         water_available_liters  = res.water_available_liters,

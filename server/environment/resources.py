@@ -62,7 +62,7 @@ NUTRIENT_FE_STOCK_PPM_BUDGET = 2.0   * 450
 # Daily replenishment limits (how much nutrient we can dose per sol)
 MAX_N_DOSE_PER_SOL  = 30.0    # ppm
 MAX_K_DOSE_PER_SOL  = 40.0    # ppm
-MAX_FE_DOSE_PER_SOL = 0.5     # ppm
+MAX_FE_DOSE_PER_SOL = 0.14    # ppm — slightly less than consumption so Fe drifts visibly
 
 # Critical reserve thresholds — below these, planner must conserve
 WATER_CRITICAL_LITERS   = 100.0
@@ -186,20 +186,35 @@ def _recycle_water(
     Returns: (water_after_recycling, total_recycled)
     """
     # Stream 1: transpiration recovery
+    # Plants release water vapour proportional to what they consumed.
+    # Rate improves as the greenhouse matures — more active plants = more vapour.
+    # Base rate 0.65 is well established for hydroponic systems.
     transpiration_recovery = crop_consumption_liters * 0.65 * recycling_efficiency
 
     # Stream 2: crew greywater
+    # NASA standard: ~80% of crew water use is recoverable (urine + shower + breath)
     crew_recovery = CREW_WATER_LITERS_PER_SOL * 0.80 * recycling_efficiency
 
-    # Stream 3: atmospheric condensate — scales with humidity above 60%
-    condensate = max((humidity_rh - 60.0) / 40.0, 0.0) * 5.0 * recycling_efficiency
+    # Stream 3: atmospheric condensate
+    # Previous threshold was 60% — humidity never exceeded this so condensate was always 0.
+    # Fix: lower threshold to 40% so condensate always contributes at normal greenhouse humidity.
+    # At 60% RH (our target): (60-40)/60 * 8 * 0.85 = ~2.3L/sol base contribution.
+    # At 70% RH (peak transpiration): (70-40)/60 * 8 * 0.85 = ~3.4L/sol.
+    # This makes the ratio dynamic — it improves as more plants transpire and raise humidity.
+    condensate = max((humidity_rh - 40.0) / 60.0, 0.0) * 8.0 * recycling_efficiency
 
-    total_recycled = transpiration_recovery + crew_recovery + condensate
+    # Stream 4: base envelope condensate
+    # Even at low humidity, greenhouse polycarbonate panels collect some condensate.
+    # This is a fixed ~1.5L/sol minimum regardless of crop status or humidity.
+    # Represents dew formation on cooler panel surfaces overnight.
+    base_condensate = 1.5 * recycling_efficiency
+
+    total_recycled = transpiration_recovery + crew_recovery + condensate + base_condensate
     water_after    = water_after_deduction + total_recycled
 
     logger.info(
-        "Water recycling | transpiration=%.1fL crew=%.1fL condensate=%.1fL → +%.1fL",
-        transpiration_recovery, crew_recovery, condensate, total_recycled,
+        "Water recycling | transpiration=%.1fL crew=%.1fL condensate=%.1fL base=%.1fL → +%.1fL",
+        transpiration_recovery, crew_recovery, condensate, base_condensate, total_recycled,
     )
 
     return round(water_after, 1), round(total_recycled, 1)
@@ -263,7 +278,7 @@ def _update_nutrients(
     # ── Deduct consumption ────────────────────────────────────────────────────
     after_n  = max(current_n  - n_consumed,  0.0)
     after_k  = max(current_k  - k_consumed,  0.0)
-    after_fe = max(current_fe - 0.1,         0.0)   # Fe consumed at ~0.1 ppm/sol
+    after_fe = max(current_fe - 0.15,        0.0)   # Fe consumed at ~0.15 ppm/sol
 
     # ── Check stock levels — ration if running low ────────────────────────────
     n_stock_remaining  = NUTRIENT_N_STOCK_PPM_BUDGET  - n_stock_used

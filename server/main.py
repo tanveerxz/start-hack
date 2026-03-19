@@ -34,7 +34,6 @@ import os
 import random
 from contextlib import asynccontextmanager
 from typing import Optional
-from agent.claude_agent import get_ai_summary
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,11 +46,9 @@ from agent.models import (
     MarsEnvironment,
     default_crop_profiles,
 )
-
 from agent.planner import plan, DEFAULT_ALLOC
 from agent.reward import score as reward_score
 from agent.rl_agent import GreenhouseAgent, build_observation
-from agent.claude_agent import get_ai_summary
 from api.schemas import (
     DailyResponseSchema,
     MissionSummarySchema,
@@ -319,16 +316,22 @@ def run_one_sol() -> DailyResponseSchema:
     # ── STEP 8: schemas.py — build the API response ───────────────────────────
     # Translates all backend dataclasses into one clean JSON payload.
     # This is what the Next.js frontend receives.
+    # Accumulate nutrition BEFORE building payload so cumulative totals are current
+    cumulative_kcal   += sim_result.daily_harvested_kcal
+    cumulative_protein += sim_result.daily_harvested_protein_g
+
     payload = build_daily_response(
-        schedule          = daily_schedule,
-        sim               = sim_result,
-        res               = resource_status,
-        agent_state       = agent_state,
-        reward            = reward_signal,
-        env               = greenhouse_state,
-        needs_kcal        = crew_needs.kcal_per_day,
-        needs_protein     = crew_needs.protein_g_per_day,
-        mission_duration  = MISSION_DURATION,
+        schedule             = daily_schedule,
+        sim                  = sim_result,
+        res                  = resource_status,
+        agent_state          = agent_state,
+        reward               = reward_signal,
+        env                  = greenhouse_state,
+        needs_kcal           = crew_needs.kcal_per_day,
+        needs_protein        = crew_needs.protein_g_per_day,
+        mission_duration     = MISSION_DURATION,
+        cumulative_kcal      = cumulative_kcal,
+        cumulative_protein_g = cumulative_protein,
     )
 
     # ── STEP 9: Accumulate history ────────────────────────────────────────────
@@ -339,8 +342,6 @@ def run_one_sol() -> DailyResponseSchema:
     calorie_history.append(payload.nutrition.calorie_coverage_pct / 100.0)
     recycling_history.append(payload.resources.recycling_ratio)
 
-    cumulative_kcal            += sim_result.daily_harvested_kcal
-    cumulative_protein         += sim_result.daily_harvested_protein_g
     cumulative_water_recycled  += resource_status.water_recycled_liters
     cumulative_yield_kg        += sim_result.total_projected_yield_kg
 
@@ -490,12 +491,3 @@ async def health():
         "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
         "agent_trained":   agent.sols_trained,
     }
-    
-
-@app.get("/api/ai-summary")
-async def ai_summary():
-    if not sol_history:
-        raise HTTPException(status_code=404, detail="No sols run yet.")
-    latest = sol_history[-1].model_dump()
-    return get_ai_summary(latest)
-

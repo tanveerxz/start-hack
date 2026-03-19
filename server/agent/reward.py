@@ -196,7 +196,9 @@ def _score_efficiency(
     else:
         recycle_ratio = 1.0   # no consumption = perfect efficiency
 
-    recycle_score = recycle_ratio / 0.85   # normalise: 85% recycling = score 1.0
+    recycle_score = recycle_ratio / 0.65   # normalise: 65% recycling = score 1.0
+    # 65% is realistic for a 100m² hydroponic greenhouse with ~500L/day consumption.
+    # 85% would require either far lower crop water use or a much larger condensate system.
     recycle_score = min(recycle_score, 1.0)
 
     # Sub-score 2: nutrient stock conservation

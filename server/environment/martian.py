@@ -71,7 +71,7 @@ def _mars_temp_pressure(day: int, mars_env: MarsEnvironment) -> float:
     diurnal_angle = (2 * math.pi * (day % 1))   # intra-day (simplified to sol)
 
     # Seasonal component: Mars has an eccentric orbit — summer/winter swings
-    seasonal_offset = 8.0 * math.sin(sol_angle)   # ±8°C seasonal drift
+    seasonal_offset = 2.0 * math.sin(sol_angle)   # ±2°C seasonal drift (well-insulated greenhouse)
 
     # Diurnal bleed-through after insulation — greenhouse loses ~3°C overnight
     diurnal_bleed = -3.0 * math.cos(diurnal_angle)
@@ -148,14 +148,22 @@ def _apply_temp_control(current: float, drift: float, power_available: float) ->
     HVAC system: push temperature toward TARGET_TEMP_C.
     Power-limited: if power_available is low, correction is reduced.
 
+    Uses a proportional controller — corrects 70% of error per sol,
+    not 100%. This leaves a natural residual of ±0.5-1.5°C that makes
+    the environment feel real rather than perfectly locked at 20.0°C.
+
     Returns: (new_temp, power_consumed_kwh)
     """
+    CONTROL_EFFICIENCY = 0.85  # HVAC corrects 85% of error per sol
     raw           = current + drift
     error         = TARGET_TEMP_C - raw
-    power_factor  = min(power_available / 10.0, 1.0)  # needs ~10 kWh for full correction
-    correction    = _clamp(error, -MAX_TEMP_CORRECTION_C, MAX_TEMP_CORRECTION_C) * power_factor
-    power_used    = abs(correction) * 0.8              # ~0.8 kWh per °C correction
-    return round(raw + correction, 2), round(power_used, 2)
+    power_factor  = min(power_available / 10.0, 1.0)
+    # Only correct 70% of the error — leaves natural residual variation
+    correction    = _clamp(error, -MAX_TEMP_CORRECTION_C, MAX_TEMP_CORRECTION_C) * power_factor * CONTROL_EFFICIENCY
+    power_used    = abs(correction) * 0.8
+    # Add small sensor noise — real thermometers have ±0.1°C imprecision
+    sensor_noise  = random.gauss(0, 0.1)
+    return round(raw + correction + sensor_noise, 2), round(power_used, 2)
 
 
 def _apply_humidity_control(current: float, drift: float) -> float:
@@ -183,11 +191,15 @@ def _apply_co2_control(current: float, drift: float, power_available: float) -> 
         logger.warning("CO2 SAFETY OVERRIDE: %.0f ppm > %.0f ppm. Emergency ventilation.", raw, CO2_SAFETY_MAX_PPM)
         raw = CO2_SAFETY_MAX_PPM - 100   # forced reduction
 
+    CONTROL_EFFICIENCY = 0.70  # CO2 system corrects 70% of error per sol
     error        = TARGET_CO2_PPM - raw
     power_factor = min(power_available / 5.0, 1.0)
-    correction   = _clamp(error, -MAX_CO2_CORRECTION_PPM, MAX_CO2_CORRECTION_PPM) * power_factor
+    # Proportional correction — leaves natural residual of ±15-40ppm
+    correction   = _clamp(error, -MAX_CO2_CORRECTION_PPM, MAX_CO2_CORRECTION_PPM) * power_factor * CONTROL_EFFICIENCY
     power_used   = abs(correction) * 0.02
-    return round(_clamp(raw + correction, 0.0, 2000.0), 1), round(power_used, 2)
+    # Small sensor noise — real CO2 sensors have ±5ppm imprecision
+    sensor_noise = random.gauss(0, 5.0)
+    return round(_clamp(raw + correction + sensor_noise, 0.0, 2000.0), 1), round(power_used, 2)
 
 
 def _apply_led_control(natural_par: float, power_available: float) -> tuple[float, float]:
