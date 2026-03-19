@@ -5,6 +5,7 @@ import type {
   ClaudeRecommendation,
   RecommendationPriority,
 } from '@/types/greenhouse'
+import InfoTooltip from '@/components/dashboard/InfoTooltip'
 
 interface AiInsightsPanelProps {
   recommendation: ClaudeRecommendation | null
@@ -69,26 +70,28 @@ function InsightStep({ step, index }: { step: ClaudeNextStep; index: number }) {
   const tone = priorityStyles[step.priority]
 
   return (
-    <div className="rounded-[20px] border border-white/8 bg-black/20 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/38">
-            Step {index + 1}
-          </p>
-          <h3 className="mt-2 text-[15px] font-semibold leading-6 text-white">
-            {step.action}
-          </h3>
+    <InfoTooltip content={step.rationale}>
+      <div className="rounded-[20px] border border-white/8 bg-black/20 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/38">
+              Step {index + 1}
+            </p>
+            <h3 className="mt-2 text-[15px] font-semibold leading-6 text-white">
+              {step.action}
+            </h3>
+          </div>
+
+          <div
+            className={`shrink-0 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${tone.border} ${tone.bg} ${tone.text}`}
+          >
+            {step.priority}
+          </div>
         </div>
 
-        <div
-          className={`shrink-0 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${tone.border} ${tone.bg} ${tone.text}`}
-        >
-          {step.priority}
-        </div>
+        <p className="mt-3 text-sm leading-6 text-white/62">{step.rationale}</p>
       </div>
-
-      <p className="mt-3 text-sm leading-6 text-white/62">{step.rationale}</p>
-    </div>
+    </InfoTooltip>
   )
 }
 

@@ -34,6 +34,7 @@ export default function DashboardPage() {
     currentRecommendationLoading,
     currentRecommendationError,
     fetchRecommendationForDay,
+    timelinePoints,
     runStep,
   } = useMissionControl()
 
@@ -135,7 +136,7 @@ export default function DashboardPage() {
             <>
               <KpiGrid sol={selectedSol} />
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.8fr)] 2xl:gap-6">
-                <MissionTrendPanel sol={selectedSol} />
+                <MissionTrendPanel sol={selectedSol} timelinePoints={timelinePoints} />
                 <div className="grid gap-4">
                   <StatusFeedPanel
                     title="Mission Activity"
@@ -168,7 +169,7 @@ export default function DashboardPage() {
 
           {activeTab === 'systems' && (
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] 2xl:gap-6">
-              <MissionTrendPanel sol={selectedSol} expanded />
+              <MissionTrendPanel sol={selectedSol} timelinePoints={timelinePoints} expanded />
               <StatusFeedPanel
                 title="System Signals"
                 eyebrow="Agent / Stress / Yield"

@@ -1,4 +1,5 @@
 import type { DailyResponse, HealthResponse, MissionSummary } from '@/types/greenhouse'
+import InfoTooltip from '@/components/dashboard/InfoTooltip'
 
 interface MissionHeaderProps {
   health: HealthResponse | null
@@ -22,24 +23,28 @@ function StatPill({
   label,
   value,
   tone,
+  tooltip,
 }: {
   label: string
   value: string
   tone?: string
+  tooltip: string
 }) {
   return (
-    <div
-      className={`rounded-[20px] border px-4 py-3 backdrop-blur-xl ${
-        tone ?? 'border-white/10 bg-black/20'
-      }`}
-    >
-      <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
-        {label}
-      </p>
-      <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.04em] text-white">
-        {value}
-      </p>
-    </div>
+    <InfoTooltip content={tooltip} position="top">
+      <div
+        className={`rounded-[20px] border px-4 py-3 backdrop-blur-xl ${
+          tone ?? 'border-white/10 bg-black/20'
+        }`}
+      >
+        <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+          {label}
+        </p>
+        <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.04em] text-white">
+          {value}
+        </p>
+      </div>
+    </InfoTooltip>
   )
 }
 
@@ -50,7 +55,7 @@ export default function MissionHeader({
   sectionLoading,
 }: MissionHeaderProps) {
   return (
-    <section className="relative overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.025),0_28px_90px_rgba(0,0,0,0.42)] md:p-6 xl:p-7">
+    <section className="relative z-10 overflow-visible rounded-[30px] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.025),0_28px_90px_rgba(0,0,0,0.42)] md:p-6 xl:p-7">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(196,106,45,0.18),transparent_24%),radial-gradient(circle_at_left,rgba(64,168,196,0.10),transparent_22%),linear-gradient(to_bottom,rgba(255,255,255,0.025),transparent_44%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.9fr)] xl:items-end">
@@ -84,12 +89,21 @@ export default function MissionHeader({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <StatPill label="Current Sol" value={`${health?.sol ?? '—'}`} />
-          <StatPill label="Remaining" value={`${health?.sols_remaining ?? '—'}`} />
+          <StatPill
+            label="Current Sol"
+            value={`${health?.sol ?? '-'}`}
+            tooltip="The latest simulated Martian day available from mission control."
+          />
+          <StatPill
+            label="Remaining"
+            value={`${health?.sols_remaining ?? '-'}`}
+            tooltip="Number of sols left before the 450-sol mission window is complete."
+          />
           <StatPill
             label="Mission Status"
-            value={missionSummary?.mission_status ?? 'nominal'}
+            value={missionSummary?.mission_status ?? 'Nominal'}
             tone={missionTone(missionSummary?.mission_status)}
+            tooltip="High-level health flag derived from critical resource state and recent reward performance."
           />
         </div>
       </div>
