@@ -4,7 +4,8 @@
 
 ### Autonomous Martian Greenhouse · START HACK 2026
 
-Feeding 4 astronauts across 450 sols on the surface of Mars
+Feeding 4 astronauts across 450 sols on the surface of [Mars](https://science.nasa.gov/mars/)
+
 
 ![Next.js](https://img.shields.io/badge/Next.js_15-black?style=for-the-badge&logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
@@ -12,9 +13,10 @@ Feeding 4 astronauts across 450 sols on the surface of Mars
 ![Claude](https://img.shields.io/badge/Claude_AI-D97757?style=for-the-badge&logo=anthropic&logoColor=white)
 ![Three.js](https://img.shields.io/badge/Three.js-black?style=for-the-badge&logo=three.js)
 
-<img width="1512" alt="Ares Harvest Dashboard" src="https://github.com/user-attachments/assets/6ef5f242-41b7-4e4d-b647-d3d274a224f6" />
+<img width="1510" height="745" alt="Ares Harvest Dashboard" src="https://github.com/user-attachments/assets/90b970e3-394b-4a40-a8fa-f2f71fff3207" />
 
 </div>
+
 
 
 A reinforcement learning agent autonomously manages a pressurised Martian greenhouse: optimising crop allocation, recycling resources, and adapting to dust storms in real time. Mission control is rendered as a cinematic 3D dashboard.
@@ -103,6 +105,6 @@ start-hack/
 
 Built at **START HACK 2026** · Syngenta × AWS challenge
 
-St. Gallen, Switzerland
+**St. Gallen, Switzerland**
 
 </div>
