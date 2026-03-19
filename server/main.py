@@ -49,6 +49,7 @@ from agent.models import (
 from agent.planner import plan, DEFAULT_ALLOC
 from agent.reward import score as reward_score
 from agent.rl_agent import GreenhouseAgent, build_observation
+from agent.claude_agent import get_ai_summary   
 from api.schemas import (
     DailyResponseSchema,
     MissionSummarySchema,
@@ -510,3 +511,34 @@ async def health():
         "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
         "agent_trained":   agent.sols_trained,
     }
+    
+
+
+@app.get("/api/ai-summary")
+async def ai_summary(day: int):
+    """
+    GET /api/ai-summary?day=42
+    Fetches the stored sol payload and passes it to Claude for analysis.
+    Returns a ClaudeRecommendation-shaped JSON object.
+    """
+    if not sol_history:
+        raise HTTPException(status_code=404, detail="No sols run yet.")
+
+    # Clamp to latest available sol rather than hard 404-ing on future days
+    clamped_day = min(max(day, 1), len(sol_history))
+
+    sol_payload = sol_history[clamped_day - 1]
+
+    # sol_history stores DailyResponseSchema Pydantic objects — serialise first
+    raw = sol_payload.model_dump()
+
+    result = get_ai_summary(raw)
+
+    # Surface Claude errors as 502 rather than silently returning empty data
+    if "error" in result:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Claude API error: {result['error']}"
+        )
+
+    return result
