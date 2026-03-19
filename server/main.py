@@ -34,6 +34,7 @@ import os
 import random
 from contextlib import asynccontextmanager
 from typing import Optional
+from agent.claude_agent import get_ai_summary
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,9 +47,11 @@ from agent.models import (
     MarsEnvironment,
     default_crop_profiles,
 )
+
 from agent.planner import plan, DEFAULT_ALLOC
 from agent.reward import score as reward_score
 from agent.rl_agent import GreenhouseAgent, build_observation
+from agent.claude_agent import get_ai_summary
 from api.schemas import (
     DailyResponseSchema,
     MissionSummarySchema,
@@ -487,3 +490,12 @@ async def health():
         "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
         "agent_trained":   agent.sols_trained,
     }
+    
+
+@app.get("/api/ai-summary")
+async def ai_summary():
+    if not sol_history:
+        raise HTTPException(status_code=404, detail="No sols run yet.")
+    latest = sol_history[-1].model_dump()
+    return get_ai_summary(latest)
+
