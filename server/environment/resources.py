@@ -220,14 +220,18 @@ def _extract_ice(
 ) -> tuple[float, float]:
     """
     Add water from subsurface ice extraction.
-    Limited to ICE_EXTRACTION_LITERS_PER_SOL — the extraction
-    equipment has fixed throughput.
+
+    Equipment throughput varies slightly each sol due to ice deposit
+    depth, drill temperature, and melt rate fluctuations — modelled
+    as ±4L Gaussian variation around the nominal 20L/sol rate.
 
     Returns: (water_with_extraction, extracted_liters)
     """
-    new_total = water_after_recycling + extraction_rate
-    logger.info("Ice extraction: +%.1fL", extraction_rate)
-    return round(new_total, 1), round(extraction_rate, 1)
+    import random
+    actual_extraction = round(max(0.0, random.gauss(extraction_rate, 2.0)), 1)
+    new_total = water_after_recycling + actual_extraction
+    logger.info("Ice extraction: +%.1fL", actual_extraction)
+    return round(new_total, 1), actual_extraction
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -329,23 +333,34 @@ def _update_nutrients(
 
 def _correct_ph(current_ph: float) -> tuple[float, bool]:
     """
-    Gradually nudge pH toward the 5.5-6.5 target range.
-    pH drifts naturally — plants consume H+ and OH- ions asymmetrically.
-    pH adjusters (pH Up / pH Down solutions) are rationed to
-    MAX_PH_CORRECTION_PER_SOL to avoid shocking the root zone.
+    Model natural pH drift then correct toward the 5.5-6.5 target range.
+
+    Plants consume H+ and OH- ions asymmetrically — net effect is a slow
+    drift toward acidity as plants preferentially uptake cations and release
+    H+ in exchange. Modelled as a small random drift each sol (~-0.08 mean)
+    so pH shows visible variation rather than locking at 6.0.
+
+    pH adjusters (pH Up / pH Down) are rationed to MAX_PH_CORRECTION_PER_SOL
+    to avoid shocking the root zone.
 
     Returns: (new_ph, was_corrected)
     """
-    if TARGET_PH_LOW <= current_ph <= TARGET_PH_HIGH:
-        return round(current_ph, 2), False
+    import random
+    # Natural acidification drift from plant ion exchange + CO2 dissolution
+    drift     = random.gauss(-0.08, 0.04)
+    drifted   = current_ph + drift
 
-    target    = (TARGET_PH_LOW + TARGET_PH_HIGH) / 2   # aim for 6.0
-    error     = target - current_ph
-    correction = _clamp(error, -MAX_PH_CORRECTION_PER_SOL, MAX_PH_CORRECTION_PER_SOL)
-    new_ph    = round(current_ph + correction, 2)
+    corrected = False
+    if not (TARGET_PH_LOW <= drifted <= TARGET_PH_HIGH):
+        target     = (TARGET_PH_LOW + TARGET_PH_HIGH) / 2
+        error      = target - drifted
+        correction = _clamp(error, -MAX_PH_CORRECTION_PER_SOL, MAX_PH_CORRECTION_PER_SOL)
+        drifted    = drifted + correction
+        corrected  = True
+        logger.info("pH correction applied: %.2f → %.2f", current_ph, drifted)
 
-    logger.info("pH correction: %.2f → %.2f", current_ph, new_ph)
-    return new_ph, True
+    new_ph = round(_clamp(drifted, 4.5, 8.0), 2)
+    return new_ph, corrected
 
 
 def _update_ec(
