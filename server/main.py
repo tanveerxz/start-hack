@@ -368,11 +368,30 @@ async def lifespan(app: FastAPI):
     Runs once at server startup.
     Seeds the first sol so the frontend has data immediately on load
     rather than showing an empty dashboard.
+
+    On a fresh start (no sol history, no in-progress simulation):
+      - Deletes any stale checkpoint so the RL agent starts from scratch
+      - This ensures the agent visibly learns during the demo rather than
+        starting already converged from a previous run
+
+    On a restart mid-mission (sol_history would be repopulated from a
+    persistent store in production — for the hackathon we always fresh-start):
+      - Same behaviour: clean agent, clean simulation
     """
     logger.info("Mars greenhouse server starting — mission duration: %d sols.", MISSION_DURATION)
     os.makedirs("data", exist_ok=True)
 
-    # Run sol 0 immediately so frontend has something to show
+    # Delete stale checkpoint on fresh start so agent learns from sol 1
+    checkpoint_path = os.path.join("data", "agent_checkpoint.json")
+    if os.path.exists(checkpoint_path):
+        os.remove(checkpoint_path)
+        logger.info("Stale checkpoint deleted — agent will start fresh.")
+
+    # Reinitialise agent without old checkpoint
+    global agent
+    agent = GreenhouseAgent(checkpoint_path=checkpoint_path)
+
+    # Run sol 1 immediately so frontend has something to show
     if not sol_history:
         run_one_sol()
         logger.info("Sol 0 seeded. Server ready.")
