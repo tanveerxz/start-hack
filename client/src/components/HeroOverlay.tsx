@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { gsap } from 'gsap'
+import { useRouter } from 'next/navigation'
 
 interface PhaseData {
   eyebrow: string
@@ -69,7 +70,7 @@ const PHASES: PhaseData[] = [
     status: 'Autonomy online',
     whisper: 'Planning layer stable and responsive',
     telemetry: ['AGENTS: NOMINAL', 'SYSTEM: READY'],
-    ctaLabel: 'Open Dashboard',
+    ctaLabel: 'Enter Dashboard',
   },
 ]
 
@@ -111,7 +112,7 @@ function activePhaseIndex(p: number) {
 interface HeroOverlayProps {
   scrollProgress: number
   mouse: { x: number; y: number }
-  onInitiate: () => void
+  onInitiate: (nextPhaseIndex?: number) => void
 }
 
 export default function HeroOverlay({
@@ -119,12 +120,14 @@ export default function HeroOverlay({
   mouse,
   onInitiate,
 }: HeroOverlayProps) {
+  const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const p = scrollProgress
   const idx = activePhaseIndex(p)
   const phase = PHASES[idx]
   const phasePresence = Math.max(...PHASES.map((_, phaseIdx) => phaseOp(p, phaseIdx)))
+  const isFinalPhase = idx === PHASES.length - 1
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -166,14 +169,33 @@ export default function HeroOverlay({
   const currentOp = phaseOp(p, idx)
   const phaseProgress = (idx + 1) / PHASES.length
 
+  const buttonMeta = useMemo(() => {
+    if (isFinalPhase) {
+      return {
+        label: 'Enter Dashboard',
+        sub: 'Open mission control',
+      }
+    }
+
+    return {
+      label: PHASES[idx].ctaLabel,
+      sub: `Continue to ${PHASES[idx + 1].eyebrow}`,
+    }
+  }, [idx, isFinalPhase])
+
   const handleCTA = () => {
-    onInitiate()
+    if (isFinalPhase) {
+      router.push('/dashboard')
+      return
+    }
+
+    onInitiate(idx + 1)
   }
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-10 pointer-events-none select-none overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-10 select-none overflow-hidden"
     >
       <div className="ambient-overlay" />
       <div className="vignette" />
@@ -191,7 +213,7 @@ export default function HeroOverlay({
 
       <div
         data-enter
-        className="absolute top-5 left-4 md:top-7 md:left-8"
+        className="absolute left-4 top-5 md:left-8 md:top-7"
         style={{
           opacity: brandOp,
           transform: `translate3d(${mx * 3}px, ${my * 2}px, 0)`,
@@ -208,7 +230,7 @@ export default function HeroOverlay({
 
       <div
         data-enter
-        className="absolute top-5 right-4 hidden md:block md:top-7 md:right-8"
+        className="absolute right-4 top-5 hidden md:block md:right-8 md:top-7"
         style={{
           opacity: Math.max(0.3, brandOp * 0.9),
           transform: `translate3d(${mx * 2.4}px, ${my * 1.8}px, 0)`,
@@ -228,7 +250,7 @@ export default function HeroOverlay({
           transition: 'opacity 240ms linear, transform 240ms linear',
         }}
       >
-        <div className="phase-shell border-none bg-transparent p-0 shadow-none">
+        <div className="border-none bg-transparent p-0 shadow-none">
           <div
             className="mb-5 flex items-center gap-3"
             style={{
@@ -243,7 +265,7 @@ export default function HeroOverlay({
 
           <div className="relative">
             <div
-              className="pointer-events-none absolute -inset-x-10 -top-10 -bottom-10 blur-3xl"
+              className="pointer-events-none absolute -bottom-10 -left-10 -right-10 -top-10 blur-3xl"
               style={{
                 background:
                   'radial-gradient(circle at 28% 35%, rgba(196,106,45,0.12), transparent 32%)',
@@ -283,19 +305,36 @@ export default function HeroOverlay({
           >
             <button
               onClick={handleCTA}
-              className="pointer-events-auto group relative overflow-hidden rounded-full border border-white/12 bg-white/[0.07] px-6 py-3 type-button backdrop-blur-xl transition-all duration-300 hover:scale-[1.025] hover:border-white/18 hover:bg-white/[0.11] active:scale-[0.99]"
+              className="pointer-events-auto group relative isolate overflow-hidden rounded-2xl border border-white/14 bg-[rgba(8,10,16,0.64)] px-4 py-3 text-left backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/22 hover:bg-[rgba(10,12,18,0.74)] active:translate-y-0 md:min-w-[220px] md:px-5 md:py-4"
+              aria-label={buttonMeta.label}
             >
-              <span className="relative z-10 flex items-center gap-2">
-                {phase.ctaLabel}
-                <span className="transition-transform duration-300 group-hover:translate-x-1">
-                  →
-                </span>
-              </span>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(196,106,45,0.24),transparent_45%)] opacity-90" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.03))]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(196,106,45,0.28),transparent_42%)] opacity-95" />
+              <div className="absolute inset-[1px] rounded-[15px] border border-white/6" />
+
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    {isFinalPhase ? 'Mission Access' : 'Continue Story'}
+                  </p>
+                  <p className="mt-2 text-[15px] font-semibold tracking-[-0.03em] text-white md:text-base">
+                    {buttonMeta.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/52">
+                    {buttonMeta.sub}
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/88 transition-transform duration-300 group-hover:translate-x-0.5">
+                  <span className="text-base leading-none">→</span>
+                </div>
+              </div>
             </button>
 
             <span className="target-badge">Sector A-13</span>
-            <span className="target-badge hidden sm:inline-flex">Closed Loop Habitat</span>
+            <span className="target-badge hidden sm:inline-flex">
+              Closed Loop Habitat
+            </span>
           </div>
 
           <div
@@ -331,7 +370,7 @@ export default function HeroOverlay({
           </div>
 
           <div className="max-w-[16rem]">
-            <p className="type-mono-bright mb-2 opacity-80">0{idx + 1} / 05</p>
+            <p className="mb-2 type-mono-bright opacity-80">0{idx + 1} / 05</p>
 
             <p
               className="type-editorial-small leading-relaxed text-white/88"
@@ -369,7 +408,7 @@ export default function HeroOverlay({
       </div>
 
       <div
-        className="absolute top-[13.5vh] right-4 left-4 md:hidden"
+        className="absolute left-4 right-4 top-[13.5vh] md:hidden"
         style={{
           opacity: ss(0.12, 0.24, p) * 0.92,
           transform: `translate3d(${mx * 2}px, ${my * 1.6}px, 0)`,
@@ -378,7 +417,7 @@ export default function HeroOverlay({
       >
         <div className="flex items-center justify-between">
           <p className="type-mono-bright">0{idx + 1} / 05</p>
-          <div className="h-px flex-1 mx-3 bg-white/10" />
+          <div className="mx-3 h-px flex-1 bg-white/10" />
           <p className="type-mono opacity-60">{phase.telemetry[0]}</p>
         </div>
       </div>
@@ -459,7 +498,9 @@ export default function HeroOverlay({
         }}
       >
         <div className="hud-panel px-4 py-2.5">
-          <p className="type-mono text-[9px]!">Scroll to begin descent</p>
+          <p className="text-[9px] uppercase tracking-[0.16em] text-white/56">
+            Scroll to begin descent
+          </p>
         </div>
         <div className="scroll-cue-line animate-pulse-slow" />
       </div>

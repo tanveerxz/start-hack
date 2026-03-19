@@ -2,6 +2,7 @@ import type { ResourceData } from '@/types/greenhouse'
 
 interface ResourcesPanelProps {
   resources: ResourceData | null
+  compact?: boolean
 }
 
 function ProgressBar({
@@ -20,124 +21,180 @@ function ProgressBar({
         : 'bg-cyan-300'
 
   return (
-    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/8">
+    <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-white/8">
       <div
-        className={`h-full rounded-full ${toneClass}`}
+        className={`h-full rounded-full ${toneClass} shadow-[0_0_18px_rgba(255,255,255,0.12)]`}
         style={{ width: `${clamped}%` }}
       />
     </div>
   )
 }
 
-export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
+function MetricCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string
+  value: string
+  sub: string
+}) {
+  return (
+    <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+        {label}
+      </p>
+      <p className="mt-3 break-words text-[26px] font-semibold leading-none tracking-[-0.04em] text-white md:text-[30px]">
+        {value}
+      </p>
+      <p className="mt-3 text-sm leading-6 text-white/46">{sub}</p>
+    </div>
+  )
+}
+
+export default function ResourcesPanel({
+  resources,
+  compact = false,
+}: ResourcesPanelProps) {
   const anyCritical = resources?.any_critical ?? false
+  const nutrientTone = resources?.nutrients_critical ? 'orange' : 'cyan'
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl">
-      <div className="mb-4 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.28em] text-white/40">
-            Resources
-          </p>
-          <h2 className="mt-2 text-xl font-semibold">Closed-Loop Status</h2>
+    <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_24px_80px_rgba(0,0,0,0.34)] md:p-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(196,106,45,0.08),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_44%)]" />
+
+      <div className="relative">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">
+              Resources
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white md:text-3xl">
+              Closed-Loop Resource Model
+            </h2>
+            <p className="mt-2 text-[15px] leading-7 text-white/58">
+              Water reserves, recycling efficiency, and nutrient stock visibility.
+            </p>
+          </div>
+
+          <div
+            className={`rounded-full border px-4 py-2 text-sm ${
+              anyCritical
+                ? 'border-red-400/20 bg-red-500/10 text-red-100'
+                : 'border-cyan-400/20 bg-cyan-400/10 text-cyan-100'
+            }`}
+          >
+            {anyCritical ? 'Critical state detected' : 'Resource state nominal'}
+          </div>
         </div>
 
-        <div
-          className={`rounded-full border px-3 py-1 text-xs ${
-            anyCritical
-              ? 'border-red-400/20 bg-red-500/10 text-red-100'
-              : 'border-cyan-400/20 bg-cyan-400/10 text-cyan-100'
-          }`}
-        >
-          {anyCritical ? 'Critical Flags Active' : 'Nominal'}
-        </div>
-      </div>
+        <div className={`grid gap-4 ${compact ? 'xl:grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]'}`}>
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              ['Water Available', resources ? `${resources.water_available_liters.toFixed(1)} L` : '—', 'Immediate reserve'],
+              ['Water Consumed', resources ? `${resources.water_consumed_liters.toFixed(1)} L` : '—', 'This sol usage'],
+              ['Water Recycled', resources ? `${resources.water_recycled_liters.toFixed(1)} L` : '—', 'Recovered flow'],
+              ['Water Extracted', resources ? `${resources.water_extracted_liters.toFixed(1)} L` : '—', 'External supplementation'],
+            ].map(([label, value, sub]) => (
+              <MetricCard key={label} label={label} value={value} sub={sub} />
+            ))}
+          </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-            Water Available
-          </p>
-          <p className="mt-2 text-lg font-medium">
-            {resources ? `${resources.water_available_liters.toFixed(1)} L` : '—'}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-            Water Consumed
-          </p>
-          <p className="mt-2 text-lg font-medium">
-            {resources ? `${resources.water_consumed_liters.toFixed(1)} L` : '—'}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-            Water Recycled
-          </p>
-          <p className="mt-2 text-lg font-medium">
-            {resources ? `${resources.water_recycled_liters.toFixed(1)} L` : '—'}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-            Water Extracted
-          </p>
-          <p className="mt-2 text-lg font-medium">
-            {resources ? `${resources.water_extracted_liters.toFixed(1)} L` : '—'}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-            Recycling Ratio
-          </p>
-          <p className="mt-2 text-lg font-medium">
-            {resources ? `${resources.recycling_ratio.toFixed(1)}%` : '—'}
-          </p>
-          <ProgressBar value={resources?.recycling_ratio ?? 0} />
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-            Nutrient Status
-          </p>
-          <div className="mt-3 space-y-3 text-sm text-white/75">
-            <div>
-              <div className="flex items-center justify-between">
-                <span>N stock</span>
-                <span>{resources ? `${resources.n_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+          <div className="grid gap-3">
+            <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+                  Recycling Ratio
+                </p>
+                <p className="text-base font-semibold text-white md:text-lg">
+                  {resources ? `${resources.recycling_ratio.toFixed(1)}%` : '—'}
+                </p>
               </div>
+
               <ProgressBar
-                value={resources?.n_stock_remaining_pct ?? 0}
-                tone={(resources?.n_stock_remaining_pct ?? 100) < 25 ? 'red' : 'cyan'}
+                value={resources?.recycling_ratio ?? 0}
+                tone={resources?.water_critical ? 'red' : 'cyan'}
               />
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-white/60">
+                <div className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2">
+                  Water critical: {resources?.water_critical ? 'Yes' : 'No'}
+                </div>
+                <div className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2">
+                  Nutrients critical: {resources?.nutrients_critical ? 'Yes' : 'No'}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between">
-                <span>K stock</span>
-                <span>{resources ? `${resources.k_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+            <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">
+                  Stock Remaining
+                </p>
+                <p className="text-sm text-white/50">N / K / Fe</p>
               </div>
-              <ProgressBar
-                value={resources?.k_stock_remaining_pct ?? 0}
-                tone={(resources?.k_stock_remaining_pct ?? 100) < 25 ? 'red' : 'cyan'}
-              />
+
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between text-sm text-white/72">
+                    <span>N stock</span>
+                    <span>{resources ? `${resources.n_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+                  </div>
+                  <ProgressBar
+                    value={resources?.n_stock_remaining_pct ?? 0}
+                    tone={(resources?.n_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-sm text-white/72">
+                    <span>K stock</span>
+                    <span>{resources ? `${resources.k_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+                  </div>
+                  <ProgressBar
+                    value={resources?.k_stock_remaining_pct ?? 0}
+                    tone={(resources?.k_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-sm text-white/72">
+                    <span>Fe stock</span>
+                    <span>{resources ? `${resources.fe_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+                  </div>
+                  <ProgressBar
+                    value={resources?.fe_stock_remaining_pct ?? 0}
+                    tone={(resources?.fe_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between">
-                <span>Fe stock</span>
-                <span>{resources ? `${resources.fe_stock_remaining_pct.toFixed(1)}%` : '—'}</span>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+                  N ppm
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-white">
+                  {resources ? resources.nutrient_n_ppm.toFixed(1) : '—'}
+                </p>
               </div>
-              <ProgressBar
-                value={resources?.fe_stock_remaining_pct ?? 0}
-                tone={(resources?.fe_stock_remaining_pct ?? 100) < 25 ? 'red' : 'cyan'}
-              />
+              <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+                  K ppm
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-white">
+                  {resources ? resources.nutrient_k_ppm.toFixed(1) : '—'}
+                </p>
+              </div>
+              <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+                  Fe ppm
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-white">
+                  {resources ? resources.nutrient_fe_ppm.toFixed(1) : '—'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
