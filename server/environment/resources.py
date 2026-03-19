@@ -60,9 +60,9 @@ NUTRIENT_K_STOCK_PPM_BUDGET  = 200.0 * 450
 NUTRIENT_FE_STOCK_PPM_BUDGET = 2.0   * 450
 
 # Daily replenishment limits (how much nutrient we can dose per sol)
-MAX_N_DOSE_PER_SOL  = 30.0    # ppm
-MAX_K_DOSE_PER_SOL  = 40.0    # ppm
-MAX_FE_DOSE_PER_SOL = 0.14    # ppm — slightly less than consumption so Fe drifts visibly
+MAX_N_DOSE_PER_SOL  = 50.0    # ppm — increased to keep up with peak crop consumption
+MAX_K_DOSE_PER_SOL  = 65.0    # ppm — increased to keep up with peak crop consumption
+MAX_FE_DOSE_PER_SOL = 0.25    # ppm — visible drift but won't hit critical over 450 sols
 
 # Critical reserve thresholds — below these, planner must conserve
 WATER_CRITICAL_LITERS   = 100.0
@@ -295,8 +295,15 @@ def _update_nutrients(
         logger.warning("Day %d: K stock at <20%% — rationing doses.", day)
 
     # ── Dose nutrients back up toward targets ─────────────────────────────────
-    n_needed  = max(150.0 - after_n,  0.0)
-    k_needed  = max(200.0 - after_k,  0.0)
+    # Emergency boost: if levels drop below warning threshold, dose at full
+    # capacity regardless of how far below target we are. This prevents the
+    # system getting stuck in a low-nutrient spiral over a long mission.
+    N_WARNING  = 100.0   # ppm — below this, dose at maximum rate
+    K_WARNING  = 140.0   # ppm
+    FE_WARNING = 1.0     # ppm
+
+    n_needed  = MAX_N_DOSE_PER_SOL  if after_n  < N_WARNING  else max(150.0 - after_n,  0.0)
+    k_needed  = MAX_K_DOSE_PER_SOL  if after_k  < K_WARNING  else max(200.0 - after_k,  0.0)
     fe_needed = max(2.0   - after_fe, 0.0)
 
     n_dosed  = min(n_needed,  MAX_N_DOSE_PER_SOL  * n_ration)
