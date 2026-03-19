@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-void: #030308;
+  --color-void-raised: #090b12;
+  --color-mars-orange: #c46a2d;
+  --color-mars-rust: #7a3e1d;
+  --color-mars-glow: #ffab73;
+  --color-bio-green: #7fae6a;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(196, 106, 45, 0.12), transparent 18%),
+    radial-gradient(circle at 10% 12%, rgba(64, 168, 196, 0.08), transparent 22%),
+    linear-gradient(180deg, #05070b 0%, #03050a 100%);
+  color: #ffffff;
+  overflow-x: clip;
+}
+
+::selection {
+  background: rgba(196, 106, 45, 0.28);
+  color: #fff;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.glass-surface {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.09);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 18px 40px rgba(0,0,0,0.22);
+}
+
+.glass-surface-soft {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-grid-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+@media (max-width: 768px) {
+  body {
+    background:
+      radial-gradient(circle at 80% 0%, rgba(196, 106, 45, 0.10), transparent 24%),
+      linear-gradient(180deg, #05070b 0%, #03050a 100%);
+  }
+}
