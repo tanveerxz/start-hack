@@ -63,6 +63,10 @@ export default function ResourcesPanel({
 }: ResourcesPanelProps) {
   const anyCritical = resources?.any_critical ?? false
   const nutrientTone = resources?.nutrients_critical ? 'orange' : 'cyan'
+  const recyclingRatioPct = (resources?.recycling_ratio ?? 0) * 100
+  const nStockPct = (resources?.n_stock_remaining_pct ?? 0) * 100
+  const kStockPct = (resources?.k_stock_remaining_pct ?? 0) * 100
+  const feStockPct = (resources?.fe_stock_remaining_pct ?? 0) * 100
 
   return (
     <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_24px_80px_rgba(0,0,0,0.34)] md:p-6">
@@ -113,12 +117,12 @@ export default function ResourcesPanel({
                     Recycling Ratio
                   </p>
                   <p className="text-base font-semibold text-white md:text-lg">
-                    {resources ? `${resources.recycling_ratio.toFixed(1)}%` : '-'}
+                    {resources ? `${recyclingRatioPct.toFixed(1)}%` : '-'}
                   </p>
                 </div>
 
                 <ProgressBar
-                  value={resources?.recycling_ratio ?? 0}
+                  value={recyclingRatioPct}
                   tone={resources?.water_critical ? 'red' : 'cyan'}
                 />
 
@@ -146,33 +150,33 @@ export default function ResourcesPanel({
                   <div>
                     <div className="flex items-center justify-between text-sm text-white/72">
                       <span>N stock</span>
-                      <span>{resources ? `${resources.n_stock_remaining_pct.toFixed(1)}%` : '-'}</span>
+                      <span>{resources ? `${nStockPct.toFixed(1)}%` : '-'}</span>
                     </div>
                     <ProgressBar
-                      value={resources?.n_stock_remaining_pct ?? 0}
-                      tone={(resources?.n_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                      value={nStockPct}
+                      tone={nStockPct < 25 ? 'red' : nutrientTone}
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between text-sm text-white/72">
                       <span>K stock</span>
-                      <span>{resources ? `${resources.k_stock_remaining_pct.toFixed(1)}%` : '-'}</span>
+                      <span>{resources ? `${kStockPct.toFixed(1)}%` : '-'}</span>
                     </div>
                     <ProgressBar
-                      value={resources?.k_stock_remaining_pct ?? 0}
-                      tone={(resources?.k_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                      value={kStockPct}
+                      tone={kStockPct < 25 ? 'red' : nutrientTone}
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between text-sm text-white/72">
                       <span>Fe stock</span>
-                      <span>{resources ? `${resources.fe_stock_remaining_pct.toFixed(1)}%` : '-'}</span>
+                      <span>{resources ? `${feStockPct.toFixed(1)}%` : '-'}</span>
                     </div>
                     <ProgressBar
-                      value={resources?.fe_stock_remaining_pct ?? 0}
-                      tone={(resources?.fe_stock_remaining_pct ?? 100) < 25 ? 'red' : nutrientTone}
+                      value={feStockPct}
+                      tone={feStockPct < 25 ? 'red' : nutrientTone}
                     />
                   </div>
                 </div>

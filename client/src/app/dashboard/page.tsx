@@ -13,6 +13,12 @@ import DashboardTabs, { type DashboardTab } from '@/components/dashboard/Dashboa
 import MissionTrendPanel from '@/components/dashboard/MissionTrendPanel'
 import StatusFeedPanel from '@/components/dashboard/StatusFeedPanel'
 import AiInsightsPanel from '@/components/dashboard/AiInsightsPanel'
+import AllocationPanel from '@/components/dashboard/AllocationPanel'
+import PlannerPanel from '@/components/dashboard/PlannerPanel'
+import CropStatusPanel from '@/components/dashboard/CropStatusPanel'
+import RewardBreakdownPanel from '@/components/dashboard/RewardBreakdownPanel'
+import AlertsPanel from '@/components/dashboard/AlertsPanel'
+import CrewPanel from '@/components/dashboard/CrewPanel'
 import { useMissionControl } from '@/hooks/useMissionControl'
 import styles from './index.module.css'
 
@@ -70,6 +76,19 @@ export default function DashboardPage() {
         label: 'Nutrition',
         value: `${selectedSol.nutrition.calorie_coverage_pct.toFixed(1)}% calorie coverage / ${selectedSol.nutrition.protein_coverage_pct.toFixed(1)}% protein coverage`,
         tone: 'default' as const,
+      },
+      {
+        label: 'Crew',
+        value: selectedSol.crew?.crew_critical
+          ? 'Crew critical state detected'
+          : selectedSol.crew?.any_in_triage
+            ? `Triage active for ${selectedSol.crew.triage_astronaut ?? 'one astronaut'}`
+            : 'Four astronauts nominal',
+        tone: selectedSol.crew?.crew_critical
+          ? ('danger' as const)
+          : selectedSol.crew?.any_in_triage
+            ? ('warning' as const)
+            : ('success' as const),
       },
     ]
   }, [selectedSol])
@@ -140,23 +159,52 @@ export default function DashboardPage() {
 
           {activeTab === 'overview' && (
             <>
-              <KpiGrid sol={selectedSol} />
+              <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.82fr)] 2xl:gap-6">
+                <KpiGrid sol={selectedSol} />
+                <AiInsightsPanel
+                  recommendation={currentRecommendation}
+                  loading={currentRecommendationLoading}
+                  error={currentRecommendationError}
+                  onGenerate={() => void fetchRecommendationForDay(selectedSol.day, true)}
+                />
+              </div>
+
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.8fr)] 2xl:gap-6">
                 <MissionTrendPanel sol={selectedSol} timelinePoints={timelinePoints} />
-                <div className="grid gap-4">
-                  <StatusFeedPanel
-                    title="Mission Activity"
-                    eyebrow="Live Signals"
-                    items={statusItems}
-                  />
-                  <AiInsightsPanel
-                    recommendation={currentRecommendation}
-                    loading={currentRecommendationLoading}
-                    error={currentRecommendationError}
-                    onGenerate={() => void fetchRecommendationForDay(selectedSol.day, true)}
-                  />
-                </div>
+                <StatusFeedPanel
+                  title="Mission Activity"
+                  eyebrow="Live Signals"
+                  items={statusItems}
+                />
               </div>
+
+              <CrewPanel
+                crew={selectedSol.crew}
+                missionSummary={missionSummary}
+                nutrition={selectedSol.nutrition}
+                day={selectedSol.day}
+              />
+
+              <div className="grid gap-4 xl:grid-cols-2 2xl:gap-6">
+                <AllocationPanel
+                  allocation={selectedSol.allocation}
+                  proposedAllocation={selectedSol.agent.proposed_allocation}
+                  missionAllocation={missionSummary?.current_allocation ?? null}
+                  inWarmup={selectedSol.agent.in_warmup}
+                />
+                <RewardBreakdownPanel reward={selectedSol.reward} agent={selectedSol.agent} />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] 2xl:gap-6">
+                <PlannerPanel
+                  summary={selectedSol.summary}
+                  plantingEvents={selectedSol.planting_events}
+                  harvestEvents={selectedSol.harvest_events}
+                />
+                <AlertsPanel alerts={selectedSol.stress_alerts} />
+              </div>
+
+              <CropStatusPanel cropStatuses={selectedSol.crop_statuses} />
 
               <div className="grid gap-4 xl:grid-cols-2 2xl:gap-6">
                 <EnvironmentPanel environment={selectedSol.environment} compact />
@@ -174,34 +222,64 @@ export default function DashboardPage() {
           )}
 
           {activeTab === 'systems' && (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] 2xl:gap-6">
-              <MissionTrendPanel sol={selectedSol} timelinePoints={timelinePoints} expanded />
-              <StatusFeedPanel
-                title="System Signals"
-                eyebrow="Agent / Stress / Yield"
-                items={[
-                  {
-                    label: 'Agent Reward',
-                    value: `${selectedSol.reward.total.toFixed(3)} current reward`,
-                    tone: selectedSol.reward.total < 0 ? 'danger' : 'success',
-                  },
-                  {
-                    label: 'Harvest Ready',
-                    value: `${selectedSol.crop_statuses.filter((crop) => crop.ready_to_harvest).length} crop batches ready`,
-                    tone: 'success',
-                  },
-                  {
-                    label: 'Stress Alerts',
-                    value: `${selectedSol.stress_alerts.length} active issues`,
-                    tone: selectedSol.stress_alerts.length > 0 ? 'warning' : 'success',
-                  },
-                  {
-                    label: 'Mission State',
-                    value: missionComplete ? 'Mission complete' : 'Simulation window active',
-                    tone: missionComplete ? 'warning' : 'info',
-                  },
-                ]}
+            <div className="grid gap-4 2xl:gap-6">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] 2xl:gap-6">
+                <MissionTrendPanel sol={selectedSol} timelinePoints={timelinePoints} expanded />
+                <StatusFeedPanel
+                  title="System Signals"
+                  eyebrow="Agent / Stress / Yield"
+                  items={[
+                    {
+                      label: 'Agent Reward',
+                      value: `${selectedSol.reward.total.toFixed(3)} current reward`,
+                      tone: selectedSol.reward.total < 0 ? 'danger' : 'success',
+                    },
+                    {
+                      label: 'Harvest Ready',
+                      value: `${selectedSol.crop_statuses.filter((crop) => crop.ready_to_harvest).length} crop batches ready`,
+                      tone: 'success',
+                    },
+                    {
+                      label: 'Stress Alerts',
+                      value: `${selectedSol.stress_alerts.length} active issues`,
+                      tone: selectedSol.stress_alerts.length > 0 ? 'warning' : 'success',
+                    },
+                    {
+                      label: 'Mission State',
+                      value: missionComplete ? 'Mission complete' : 'Simulation window active',
+                      tone: missionComplete ? 'warning' : 'info',
+                    },
+                  ]}
+                />
+              </div>
+
+              <CrewPanel
+                crew={selectedSol.crew}
+                missionSummary={missionSummary}
+                nutrition={selectedSol.nutrition}
+                day={selectedSol.day}
               />
+
+              <div className="grid gap-4 xl:grid-cols-2 2xl:gap-6">
+                <AllocationPanel
+                  allocation={selectedSol.allocation}
+                  proposedAllocation={selectedSol.agent.proposed_allocation}
+                  missionAllocation={missionSummary?.current_allocation ?? null}
+                  inWarmup={selectedSol.agent.in_warmup}
+                />
+                <RewardBreakdownPanel reward={selectedSol.reward} agent={selectedSol.agent} />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] 2xl:gap-6">
+                <PlannerPanel
+                  summary={selectedSol.summary}
+                  plantingEvents={selectedSol.planting_events}
+                  harvestEvents={selectedSol.harvest_events}
+                />
+                <AlertsPanel alerts={selectedSol.stress_alerts} />
+              </div>
+
+              <CropStatusPanel cropStatuses={selectedSol.crop_statuses} />
             </div>
           )}
         </DashboardShell>

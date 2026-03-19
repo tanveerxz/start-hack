@@ -54,6 +54,7 @@ from agent.reward import (
 )
 from agent.rl_agent import GreenhouseAgent, build_observation
 from agent.claude_agent import get_ai_summary   
+from agent.crew import generate_crew, reset_crew, update_crew_sol
 from api.schemas import (
     DailyResponseSchema,
     MissionSummarySchema,
@@ -143,6 +144,8 @@ cumulative_kcal:     float = 0.0
 cumulative_protein:  float = 0.0
 cumulative_water_recycled: float = 0.0
 cumulative_yield_kg: float = 0.0
+crew_profiles = generate_crew(mission_seed=42)
+current_crew_state = None
 
 
 def reset_mission_state(seed_first_sol: bool = True) -> Optional[DailyResponseSchema]:
@@ -151,6 +154,7 @@ def reset_mission_state(seed_first_sol: bool = True) -> Optional[DailyResponseSc
     Optionally seeds sol 1 immediately so the frontend always has live data.
     """
     global greenhouse_state, active_crops, current_allocation, stock_tracker, agent
+    global crew_profiles, current_crew_state
     global cumulative_kcal, cumulative_protein
     global cumulative_water_recycled, cumulative_yield_kg
 
@@ -161,6 +165,9 @@ def reset_mission_state(seed_first_sol: bool = True) -> Optional[DailyResponseSc
     active_crops = {}
     current_allocation = DEFAULT_ALLOC
     stock_tracker = initial_stock_tracker()
+    reset_crew()
+    crew_profiles = generate_crew(mission_seed=42)
+    current_crew_state = None
 
     sol_history.clear()
     reward_history.clear()
@@ -203,7 +210,7 @@ def run_one_sol() -> DailyResponseSchema:
 
     Every line here maps to a node in the workflow diagram.
     """
-    global greenhouse_state, current_allocation
+    global greenhouse_state, current_allocation, current_crew_state
     global cumulative_kcal, cumulative_protein
     global cumulative_water_recycled, cumulative_yield_kg
 
@@ -277,6 +284,7 @@ def run_one_sol() -> DailyResponseSchema:
         needs_kcal    = crew_needs.kcal_per_day,
         needs_protein = crew_needs.protein_g_per_day,
         mission_duration = MISSION_DURATION,
+        crew_state    = current_crew_state,
     )
     rl_allocation = agent.observe(observation, current_allocation)
 
@@ -303,6 +311,7 @@ def run_one_sol() -> DailyResponseSchema:
         current_alloc  = current_allocation,
         rl_override    = rl_allocation,
         profiles       = crop_profiles,
+        crew_state     = current_crew_state,
     )
 
     # Update current_allocation to what planner decided
@@ -349,6 +358,14 @@ def run_one_sol() -> DailyResponseSchema:
         res      = resource_status,
         schedule = daily_schedule,
         needs    = crew_needs,
+        crew_state = current_crew_state,
+    )
+
+    current_crew_state = update_crew_sol(
+        profiles          = crew_profiles,
+        day               = greenhouse_state.day,
+        harvested_kcal    = sim_result.daily_harvested_kcal,
+        harvested_protein = sim_result.daily_harvested_protein_g,
     )
 
     # ── STEP 7: rl_agent.py update_policy() — agent learns ───────────────────
@@ -380,6 +397,7 @@ def run_one_sol() -> DailyResponseSchema:
         mission_duration     = MISSION_DURATION,
         cumulative_kcal      = cumulative_kcal,
         cumulative_protein_g = cumulative_protein,
+        crew_state           = current_crew_state,
     )
 
     # ── STEP 9: Accumulate history ────────────────────────────────────────────
@@ -436,8 +454,11 @@ async def lifespan(app: FastAPI):
         logger.info("Stale checkpoint deleted — agent will start fresh.")
 
     # Reinitialise agent without old checkpoint
-    global agent
+    global agent, crew_profiles, current_crew_state
     agent = GreenhouseAgent(checkpoint_path=checkpoint_path)
+    reset_crew()
+    crew_profiles = generate_crew(mission_seed=42)
+    current_crew_state = None
 
     # Run sol 1 immediately so frontend has something to show
     if not sol_history:
@@ -564,6 +585,7 @@ async def get_mission_summary():
         agent_sols_trained       = agent.sols_trained,
         agent_cumulative_reward  = agent.cumulative_reward,
         any_critical_today       = sol_history[-1].resources.any_critical,
+        crew_state               = current_crew_state,
     )
 
 
