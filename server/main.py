@@ -574,7 +574,20 @@ async def health():
         "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
         "agent_trained":   agent.sols_trained,
     }
-    
+
+
+@app.get("/")
+async def root_health():
+    """
+    Default root route for platforms that health-check "/" by default.
+    Mirrors the API health response so deployments don't fail on a 404.
+    """
+    return {
+        "status":          "ok",
+        "sol":             greenhouse_state.day,
+        "sols_remaining":  MISSION_DURATION - greenhouse_state.day,
+        "agent_trained":   agent.sols_trained,
+    }
 
 
 @app.get("/api/ai-summary")
