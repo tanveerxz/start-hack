@@ -155,7 +155,7 @@ def build_observation(
     # Use 30-sol rolling average from reward history for stable coverage signal
     # Falls back to standing crop estimate on early sols before first harvest
     from agent.reward import harvest_kcal_history, harvest_protein_history
-    window = 30
+    window = 60
     recent_kcal    = harvest_kcal_history[-window:] if harvest_kcal_history else [0.0]
     recent_protein = harvest_protein_history[-window:] if harvest_protein_history else [0.0]
     avg_kcal    = sum(recent_kcal)    / len(recent_kcal)

@@ -157,12 +157,21 @@ def _apply_temp_control(current: float, drift: float, power_available: float) ->
     CONTROL_EFFICIENCY = 0.85  # HVAC corrects 85% of error per sol
     raw           = current + drift
     error         = TARGET_TEMP_C - raw
+
+    # Emergency recovery: if temperature is near crop minimum (15°C) or
+    # safety floor (10°C), HVAC runs at full power regardless of efficiency.
+    # This prevents permanent pinning at safety floor after cold events.
+    if raw < 15.0:
+        effective_efficiency = 1.0   # full power when crops are at risk
+    else:
+        effective_efficiency = CONTROL_EFFICIENCY
+
     power_factor  = min(power_available / 10.0, 1.0)
-    # Only correct 70% of the error — leaves natural residual variation
-    correction    = _clamp(error, -MAX_TEMP_CORRECTION_C, MAX_TEMP_CORRECTION_C) * power_factor * CONTROL_EFFICIENCY
+    correction    = _clamp(error, -MAX_TEMP_CORRECTION_C, MAX_TEMP_CORRECTION_C) * power_factor * effective_efficiency
     power_used    = abs(correction) * 0.8
     # Add small sensor noise — real thermometers have ±0.1°C imprecision
-    sensor_noise  = random.gauss(0, 0.1)
+    # Only add noise when not in emergency recovery mode
+    sensor_noise  = random.gauss(0, 0.1) if raw >= 15.0 else 0.0
     return round(raw + correction + sensor_noise, 2), round(power_used, 2)
 
 

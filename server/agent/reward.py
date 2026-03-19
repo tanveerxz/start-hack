@@ -135,7 +135,7 @@ def _score_nutrition(
     harvest_protein_history.append(sim.daily_harvested_protein_g)
 
     # 30-sol rolling average — smooths out the burst nature of harvests
-    window = 30
+    window = 60
     recent_kcal    = harvest_kcal_history[-window:]
     recent_protein = harvest_protein_history[-window:]
     avg_kcal    = sum(recent_kcal)    / len(recent_kcal)
