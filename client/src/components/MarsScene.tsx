@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -752,6 +752,45 @@ function Mars() {
   const gltf = useGLTF('/models/mars.glb')
   const ref = useRef<THREE.Group>(null)
   const clonedScene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
+
+  useLayoutEffect(() => {
+    const textureKeys = [
+      'map',
+      'alphaMap',
+      'aoMap',
+      'bumpMap',
+      'emissiveMap',
+      'metalnessMap',
+      'normalMap',
+      'roughnessMap',
+    ] as const
+
+    clonedScene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+
+      const materials = Array.isArray(child.material)
+        ? child.material.map((material) => material.clone())
+        : [child.material.clone()]
+
+      materials.forEach((material) => {
+        textureKeys.forEach((key) => {
+          const texture = material[key]
+          if (!(texture instanceof THREE.Texture)) return
+
+          if (key === 'map' || key === 'emissiveMap') {
+            texture.colorSpace = THREE.SRGBColorSpace
+          }
+
+          texture.needsUpdate = true
+        })
+
+        material.needsUpdate = true
+      })
+
+      child.material = Array.isArray(child.material) ? materials : materials[0]
+      child.frustumCulled = false
+    })
+  }, [clonedScene])
 
   useEffect(() => {
     if (!ref.current) return
