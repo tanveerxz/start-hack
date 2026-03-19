@@ -111,6 +111,12 @@ export function stepSimulation(payload: StepRequest) {
   })
 }
 
+export function resetSimulation() {
+  return request<DailyResponse>('/api/reset', {
+    method: 'POST',
+  })
+}
+
 export function getClaudeRecommendation(day: number) {
   // Backend currently exposes /api/ai-summary; the day query keeps the client
   // aligned with the expected per-sol contract once the server uses it.

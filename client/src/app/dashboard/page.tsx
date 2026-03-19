@@ -28,6 +28,8 @@ export default function DashboardPage() {
     loading,
     sectionLoading,
     pendingStepCount,
+    pendingReset,
+    canReset,
     missionComplete,
     error,
     currentRecommendation,
@@ -36,6 +38,7 @@ export default function DashboardPage() {
     fetchRecommendationForDay,
     timelinePoints,
     runStep,
+    resetMission,
   } = useMissionControl()
 
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview')
@@ -127,9 +130,12 @@ export default function DashboardPage() {
           <SimulationControls
             missionSummary={missionSummary}
             pendingStepCount={pendingStepCount}
+            pendingReset={pendingReset}
+            canReset={canReset}
             missionComplete={missionComplete}
             error={error}
             onRun={(count) => void runStep(count)}
+            onReset={() => void resetMission()}
           />
 
           {activeTab === 'overview' && (

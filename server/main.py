@@ -47,7 +47,11 @@ from agent.models import (
     default_crop_profiles,
 )
 from agent.planner import plan, DEFAULT_ALLOC
-from agent.reward import score as reward_score
+from agent.reward import (
+    harvest_kcal_history,
+    harvest_protein_history,
+    score as reward_score,
+)
 from agent.rl_agent import GreenhouseAgent, build_observation
 from agent.claude_agent import get_ai_summary   
 from api.schemas import (
@@ -139,6 +143,49 @@ cumulative_kcal:     float = 0.0
 cumulative_protein:  float = 0.0
 cumulative_water_recycled: float = 0.0
 cumulative_yield_kg: float = 0.0
+
+
+def reset_mission_state(seed_first_sol: bool = True) -> Optional[DailyResponseSchema]:
+    """
+    Reset the mutable mission state, agent, and histories to a fresh run.
+    Optionally seeds sol 1 immediately so the frontend always has live data.
+    """
+    global greenhouse_state, active_crops, current_allocation, stock_tracker, agent
+    global cumulative_kcal, cumulative_protein
+    global cumulative_water_recycled, cumulative_yield_kg
+
+    logger.info("Resetting Mars greenhouse mission state.")
+    random.seed(42)
+
+    greenhouse_state = initial_greenhouse_state(total_area_m2=100.0)
+    active_crops = {}
+    current_allocation = DEFAULT_ALLOC
+    stock_tracker = initial_stock_tracker()
+
+    sol_history.clear()
+    reward_history.clear()
+    calorie_history.clear()
+    recycling_history.clear()
+    harvest_kcal_history.clear()
+    harvest_protein_history.clear()
+
+    cumulative_kcal = 0.0
+    cumulative_protein = 0.0
+    cumulative_water_recycled = 0.0
+    cumulative_yield_kg = 0.0
+
+    os.makedirs("data", exist_ok=True)
+    checkpoint_path = os.path.join("data", "agent_checkpoint.json")
+    if os.path.exists(checkpoint_path):
+        os.remove(checkpoint_path)
+        logger.info("Stale checkpoint deleted during reset.")
+
+    agent = GreenhouseAgent(checkpoint_path=checkpoint_path)
+
+    if seed_first_sol:
+        return run_one_sol()
+
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -446,6 +493,22 @@ async def step_simulation(request: SimStepRequestSchema):
         last_payload = run_one_sol()
 
     return last_payload
+
+
+@app.post("/api/reset", response_model=DailyResponseSchema)
+async def reset_simulation():
+    """
+    Reset the mission to a fresh state and seed the first sol immediately.
+
+    POST /api/reset
+
+    Returns the seeded sol payload so the frontend can redraw without
+    requiring a manual refresh.
+    """
+    payload = reset_mission_state(seed_first_sol=True)
+    if payload is None:
+        raise HTTPException(status_code=500, detail="Mission reset failed.")
+    return payload
 
 
 @app.get("/api/sol/{day}", response_model=DailyResponseSchema)

@@ -7,6 +7,7 @@ import {
   getHealth,
   getMissionSummary,
   getSol,
+  resetSimulation,
   stepSimulation,
 } from '@/lib/api/greenhouse'
 import type {
@@ -35,10 +36,13 @@ interface MissionControlState {
   sectionLoading: boolean
   timelineLoading: boolean
   pendingStepCount: StepSize | null
+  pendingReset: boolean
+  canReset: boolean
   error: string | null
   timelineError: string | null
   missionComplete: boolean
   runStep: (count: StepSize) => Promise<void>
+  resetMission: () => Promise<void>
   selectDay: (day: number) => Promise<void>
   refresh: () => Promise<void>
   goToLatest: () => Promise<void>
@@ -71,6 +75,7 @@ export function useMissionControl(): MissionControlState {
   const [sectionLoading, setSectionLoading] = useState(false)
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [pendingStepCount, setPendingStepCount] = useState<StepSize | null>(null)
+  const [pendingReset, setPendingReset] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [timelineError, setTimelineError] = useState<string | null>(null)
   const [missionComplete, setMissionComplete] = useState(false)
@@ -178,6 +183,34 @@ export function useMissionControl(): MissionControlState {
     }
   }, [fetchRecommendationForDay])
 
+  const resetMission = useCallback(async () => {
+    setPendingReset(true)
+    setError(null)
+    setTimelineError(null)
+
+    try {
+      const seededSol = await resetSimulation()
+      const [healthRes, summaryRes] = await Promise.all([getHealth(), getMissionSummary()])
+
+      recommendationsByDayRef.current = {}
+      recommendationsLoadingByDayRef.current = {}
+
+      setHealth(healthRes)
+      setMissionSummary(summaryRes)
+      setCurrentSol(seededSol)
+      setSelectedDay(seededSol.day)
+      setSolsByDay({ [seededSol.day]: seededSol })
+      setRecommendationsByDay({})
+      setRecommendationsLoadingByDay({})
+      setRecommendationsErrorByDay({})
+      setMissionComplete(false)
+    } catch (err) {
+      setError(toMessage(err))
+    } finally {
+      setPendingReset(false)
+    }
+  }, [])
+
   const selectDay = useCallback(
     async (day: number) => {
       setTimelineError(null)
@@ -239,6 +272,11 @@ export function useMissionControl(): MissionControlState {
       }))
   }, [solsByDay])
 
+  const canReset = useMemo(() => {
+    if (!currentSol) return false
+    return currentSol.day > 1
+  }, [currentSol])
+
   return {
     health,
     missionSummary,
@@ -256,10 +294,13 @@ export function useMissionControl(): MissionControlState {
     sectionLoading,
     timelineLoading,
     pendingStepCount,
+    pendingReset,
+    canReset,
     error,
     timelineError,
     missionComplete,
     runStep,
+    resetMission,
     selectDay,
     refresh,
     goToLatest,

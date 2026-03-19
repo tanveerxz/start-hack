@@ -4,9 +4,12 @@ import type { MissionSummary, StepSize } from '@/types/greenhouse'
 interface SimulationControlsProps {
   missionSummary: MissionSummary | null
   pendingStepCount: StepSize | null
+  pendingReset: boolean
+  canReset: boolean
   missionComplete: boolean
   error: string | null
   onRun: (count: StepSize) => void
+  onReset: () => void
 }
 
 const STEPS: StepSize[] = [1, 10, 50]
@@ -71,12 +74,15 @@ function MetricPill({ label, value }: { label: string; value: string }) {
 export default function SimulationControls({
   missionSummary,
   pendingStepCount,
+  pendingReset,
+  canReset,
   missionComplete,
   error,
   onRun,
+  onReset,
 }: SimulationControlsProps) {
   const [customStep, setCustomStep] = useState('5')
-  const disabled = missionComplete || pendingStepCount !== null
+  const disabled = missionComplete || pendingStepCount !== null || pendingReset
   const parsedCustomStep = Number.parseInt(customStep, 10)
   const customStepValid =
     Number.isInteger(parsedCustomStep) &&
@@ -212,6 +218,21 @@ export default function SimulationControls({
                 Executing {pendingStepCount} sol{pendingStepCount > 1 ? 's' : ''}
               </div>
             )}
+
+            {pendingReset && (
+              <div className="rounded-full border border-red-400/15 bg-red-400/10 px-4 py-2 text-sm text-red-100">
+                Resetting mission
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onReset}
+              disabled={!canReset || pendingStepCount !== null || pendingReset}
+              className="rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm text-red-100 transition-all duration-300 hover:border-red-300/35 hover:bg-red-400/16 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pendingReset ? 'Resetting...' : 'Reset Mission'}
+            </button>
           </div>
         </div>
       </div>
