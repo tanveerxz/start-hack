@@ -218,7 +218,7 @@ export default function SimulationControls({
 
       {missionComplete && (
         <div className="relative mt-5 rounded-[18px] border border-orange-400/25 bg-orange-500/10 px-4 py-3 text-sm text-orange-100">
-          Mission complete. Restart the backend to begin a new run.
+          Mission complete. Restart to simulate another.
         </div>
       )}
 
