@@ -180,7 +180,7 @@ export default function ResourcesPanel({
             </InfoTooltip>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <InfoTooltip content="Instantaneous nitrogen concentration in the nutrient solution.">
+              <InfoTooltip content="Instantaneous nitrogen concentration in the nutrient solution." position='top'>
                 <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
                   <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
                     N ppm
@@ -190,7 +190,7 @@ export default function ResourcesPanel({
                   </p>
                 </div>
               </InfoTooltip>
-              <InfoTooltip content="Instantaneous potassium concentration in the nutrient solution.">
+              <InfoTooltip content="Instantaneous potassium concentration in the nutrient solution." position='top'>
                 <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
                   <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
                     K ppm
@@ -200,7 +200,7 @@ export default function ResourcesPanel({
                   </p>
                 </div>
               </InfoTooltip>
-              <InfoTooltip content="Instantaneous iron concentration in the nutrient solution.">
+              <InfoTooltip content="Instantaneous iron concentration in the nutrient solution." position='top'>
                 <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-4">
                   <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
                     Fe ppm
