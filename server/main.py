@@ -148,6 +148,19 @@ crew_profiles = generate_crew(mission_seed=42)
 current_crew_state = None
 
 
+def ensure_mission_seeded() -> None:
+    """
+    App Runner and similar hosts can occasionally serve traffic before our
+    in-memory mission history is populated as expected. Seed sol 1 lazily
+    so read endpoints don't return 404 on a fresh instance.
+    """
+    if sol_history:
+        return
+
+    logger.warning("Mission history empty on request; seeding initial sol lazily.")
+    run_one_sol()
+
+
 def reset_mission_state(seed_first_sol: bool = True) -> Optional[DailyResponseSchema]:
     """
     Reset the mutable mission state, agent, and histories to a fresh run.
@@ -531,6 +544,8 @@ async def get_sol(day: int):
     look back at any previous sol's state without re-running the sim.
     sol_history[0] is sol 1 (sol 0 is seeded at startup).
     """
+    ensure_mission_seeded()
+
     if day < 1 or day > len(sol_history):
         raise HTTPException(
             status_code = 404,
@@ -550,8 +565,7 @@ async def get_mission_summary():
     Returns cumulative kcal, water recycled, average reward trend,
     current allocation, agent performance, and mission status flag.
     """
-    if not sol_history:
-        raise HTTPException(status_code=404, detail="No sols run yet.")
+    ensure_mission_seeded()
 
     return build_mission_summary(
         current_day              = greenhouse_state.day,
@@ -576,11 +590,12 @@ async def health():
     """
     Lightweight liveness/readiness check.
     """
+    ensure_mission_seeded()
+
     return {
         "status": "ok",
-        "mission_duration": MISSION_DURATION,
-        "current_sol": greenhouse_state.day,
-        "has_history": len(sol_history) > 0,
+        "sol": greenhouse_state.day,
+        "sols_remaining": max(MISSION_DURATION - greenhouse_state.day, 0),
         "agent_trained": agent.sols_trained,
     }
 
@@ -596,12 +611,13 @@ async def root_health():
     Default root route for platform health checks.
     Keep this lightweight and always 200.
     """
+    ensure_mission_seeded()
+
     return {
         "status": "ok",
-        "service": "Mars Greenhouse API",
-        "mission_duration": MISSION_DURATION,
-        "current_sol": greenhouse_state.day,
-        "has_history": len(sol_history) > 0,
+        "sol": greenhouse_state.day,
+        "sols_remaining": max(MISSION_DURATION - greenhouse_state.day, 0),
+        "agent_trained": agent.sols_trained,
     }
 
 
@@ -617,8 +633,7 @@ async def ai_summary(day: int):
     Fetches the stored sol payload and passes it to Claude for analysis.
     Returns a ClaudeRecommendation-shaped JSON object.
     """
-    if not sol_history:
-        raise HTTPException(status_code=404, detail="No sols run yet.")
+    ensure_mission_seeded()
 
     # Clamp to latest available sol rather than hard 404-ing on future days
     clamped_day = min(max(day, 1), len(sol_history))
