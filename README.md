@@ -419,24 +419,20 @@ The backend is a FastAPI app that simulates the greenhouse and exposes JSON endp
 - `server/main.py`
   - backend entry point and route definitions
 - `server/requirements.txt`
-  - currently lists only:
+  - currently lists:
     - `fastapi`
     - `uvicorn`
     - `pydantic`
+    - `dotenv`
+    - `anthropic`
 - `server/test_suite.py`
   - HTTP-based smoke/integration-style test script
-- `server/test.ts`
-  - empty file
 - `server/.env`
   - local runtime env file present in the current filesystem
 - `server/venv/`
   - local Python virtual environment directory
 - `server/__pycache__/`
   - Python bytecode cache
-
-Important precision note:
-
-- The code imports `dotenv`, but `server/requirements.txt` does not currently declare it.
 
 ## 11. Backend Route Layer
 
@@ -604,10 +600,6 @@ Covers:
 - mission summary
 - reward validity
 
-### `server/test.ts`
-
-Empty file. Currently unused.
-
 ## 17. API and Data Flow
 
 ### Dashboard Data Flow
@@ -634,12 +626,16 @@ Empty file. Currently unused.
 
 - backend environment variables should be stored in `server/.env`
 
+Required entry:
+
+```env
+ANTHROPIC_API_KEY=your_actual_anthropic_api_key_here
+```
+
 ## 19. Known Repository Caveats
 
 - `client/README.md` is still the default Next.js scaffold README.
 - `README.md` did not exist before this file was added.
-- `server/requirements.txt` is incomplete relative to actual imports.
-- `server/test.ts` is empty.
 - `server/venv/` and `server/__pycache__/` are local/runtime directories currently present in the repository tree.
 
 ## 20. Suggested Run Commands
