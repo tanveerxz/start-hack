@@ -62,7 +62,7 @@ NUTRIENT_FE_STOCK_PPM_BUDGET = 2.0   * 450
 # Daily replenishment limits (how much nutrient we can dose per sol)
 MAX_N_DOSE_PER_SOL  = 50.0    # ppm — increased to keep up with peak crop consumption
 MAX_K_DOSE_PER_SOL  = 65.0    # ppm — increased to keep up with peak crop consumption
-MAX_FE_DOSE_PER_SOL = 0.25    # ppm — visible drift but won't hit critical over 450 sols
+MAX_FE_DOSE_PER_SOL = 0.20    # ppm — must exceed 0.15 ppm/sol consumption rate
 
 # Critical reserve thresholds — below these, planner must conserve
 WATER_CRITICAL_LITERS   = 100.0
@@ -186,9 +186,6 @@ def _recycle_water(
     Returns: (water_after_recycling, total_recycled)
     """
     # Stream 1: transpiration recovery
-    # Plants release water vapour proportional to what they consumed.
-    # Rate improves as the greenhouse matures — more active plants = more vapour.
-    # Base rate 0.65 is well established for hydroponic systems.
     transpiration_recovery = crop_consumption_liters * 0.65 * recycling_efficiency
 
     # Stream 2: crew greywater
@@ -196,17 +193,9 @@ def _recycle_water(
     crew_recovery = CREW_WATER_LITERS_PER_SOL * 0.80 * recycling_efficiency
 
     # Stream 3: atmospheric condensate
-    # Previous threshold was 60% — humidity never exceeded this so condensate was always 0.
-    # Fix: lower threshold to 40% so condensate always contributes at normal greenhouse humidity.
-    # At 60% RH (our target): (60-40)/60 * 8 * 0.85 = ~2.3L/sol base contribution.
-    # At 70% RH (peak transpiration): (70-40)/60 * 8 * 0.85 = ~3.4L/sol.
-    # This makes the ratio dynamic — it improves as more plants transpire and raise humidity.
     condensate = max((humidity_rh - 40.0) / 60.0, 0.0) * 8.0 * recycling_efficiency
 
     # Stream 4: base envelope condensate
-    # Even at low humidity, greenhouse polycarbonate panels collect some condensate.
-    # This is a fixed ~1.5L/sol minimum regardless of crop status or humidity.
-    # Represents dew formation on cooler panel surfaces overnight.
     base_condensate = 1.5 * recycling_efficiency
 
     total_recycled = transpiration_recovery + crew_recovery + condensate + base_condensate
@@ -233,10 +222,6 @@ def _extract_ice(
     Add water from subsurface ice extraction.
     Limited to ICE_EXTRACTION_LITERS_PER_SOL — the extraction
     equipment has fixed throughput.
-
-    This is the only net-new water entering the system each sol.
-    Everything else is recycled. The RL agent learns to keep
-    consumption low enough that recycling + extraction stays positive.
 
     Returns: (water_with_extraction, extracted_liters)
     """
@@ -298,13 +283,16 @@ def _update_nutrients(
     # Emergency boost: if levels drop below warning threshold, dose at full
     # capacity regardless of how far below target we are. This prevents the
     # system getting stuck in a low-nutrient spiral over a long mission.
-    N_WARNING  = 100.0   # ppm — below this, dose at maximum rate
+    N_WARNING  = 110.0   # ppm — below this, dose at maximum rate
     K_WARNING  = 140.0   # ppm
-    FE_WARNING = 1.0     # ppm
+    FE_WARNING = 0.45    # ppm — below this, dose Fe at maximum rate to recover before critical
 
     n_needed  = MAX_N_DOSE_PER_SOL  if after_n  < N_WARNING  else max(150.0 - after_n,  0.0)
-    k_needed  = MAX_K_DOSE_PER_SOL  if after_k  < K_WARNING  else max(200.0 - after_k,  0.0)
-    fe_needed = max(2.0   - after_fe, 0.0)
+    k_needed  = MAX_K_DOSE_PER_SOL  if after_k  < K_WARNING  else max(195.0 - after_k,  0.0)
+    # Fe target is 0.14/sol replenishment — just below the 0.15/sol consumption rate.
+    # This lets Fe drift slowly downward over 450 sols (realistic finite stock depletion)
+    # while the FE_WARNING emergency boost prevents it ever hitting the 0.3 critical floor.
+    fe_needed = MAX_FE_DOSE_PER_SOL if after_fe < FE_WARNING else 0.14
 
     n_dosed  = min(n_needed,  MAX_N_DOSE_PER_SOL  * n_ration)
     k_dosed  = min(k_needed,  MAX_K_DOSE_PER_SOL  * k_ration)
@@ -382,22 +370,15 @@ def _update_ec(
 
     Returns: (new_ec, was_corrected)
     """
-    # Nutrient dosing raises EC — approx 0.1 mS/cm per 10 ppm nutrients added
     dose_effect   = (n_dosed + k_dosed) * 0.005
-
-    # Recycled water slightly dilutes EC (pure water coming back in)
     dilution      = min(water_recycled * 0.002, 0.1)
-
-    # Natural drift — slight concentration from evaporation
     evap_drift    = 0.05
 
     new_ec = current_ec + dose_effect - dilution + evap_drift
 
-    # If EC too high, flag for dilution (crops.py will catch the salinity stress)
     corrected = False
     if new_ec > TARGET_EC_HIGH:
-        # Emergency dilution — add a burst of fresh water to solution
-        new_ec    = new_ec * 0.92   # 8% dilution
+        new_ec    = new_ec * 0.92
         corrected = True
         logger.warning("EC too high (%.2f) — emergency dilution applied.", new_ec)
 
@@ -517,8 +498,6 @@ def update(
     )
 
     # ── Build updated GreenhouseState ─────────────────────────────────────────
-    # Only resource-related fields change here.
-    # Climate fields (temp, CO2, PAR etc.) stay as martian.py set them.
     updated_state = GreenhouseState(
         day                    = state.day,
         temp_celsius           = state.temp_celsius,
