@@ -555,11 +555,11 @@ def build_mission_summary(
 
     # Mission status — simple three-level flag
     if any_critical_today:
-        status = "critical"
+        status = "Critical"
     elif avg_reward < 0.0:
-        status = "caution"
+        status = "Caution"
     else:
-        status = "nominal"
+        status = "Nominal"
 
     return MissionSummarySchema(
         current_day              = current_day,
