@@ -53,7 +53,7 @@ from agent.reward import (
     score as reward_score,
 )
 from agent.rl_agent import GreenhouseAgent, build_observation
-from agent.claude_agent import get_ai_summary   
+# from agent.claude_agent import get_ai_summary   
 from api.schemas import (
     DailyResponseSchema,
     MissionSummarySchema,
@@ -595,13 +595,13 @@ async def ai_summary(day: int):
     # sol_history stores DailyResponseSchema Pydantic objects — serialise first
     raw = sol_payload.model_dump()
 
-    result = get_ai_summary(raw)
+    # result = get_ai_summary(raw)
 
     # Surface Claude errors as 502 rather than silently returning empty data
-    if "error" in result:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Claude API error: {result['error']}"
-        )
+    # if "error" in result:
+    #     raise HTTPException(
+    #         status_code=502,
+    #         detail=f"Claude API error: {result['error']}"
+    #     )
 
-    return result
+    # return result
