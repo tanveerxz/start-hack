@@ -1,37 +1,15 @@
 import os
 import json
 import logging
-from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
-
-
-def _fallback_response() -> dict:
-    return {
-        "status_summary": "AI summary unavailable.",
-        "critical_issues": [],
-        "recommendations": [
-            "Inspect live resource and stress panels for the current sol.",
-            "Use planner and allocation panels to review the agent's latest actions.",
-        ],
-        "outlook": "Fallback guidance active because the Anthropic service is unavailable.",
-        "crew_risk_level": "unknown",
-    }
-
-
-def _get_client() -> Anthropic | None:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        logger.warning("ANTHROPIC_API_KEY is not configured; using fallback AI response.")
-        return None
-    return Anthropic(api_key=api_key)
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 def get_ai_summary(sol_payload: dict) -> dict:
     trimmed = {
@@ -61,16 +39,12 @@ Required keys:
 - "outlook": one sentence predicting the next 10 sols
 - "crew_risk_level": one of "low", "medium", "high"
 
-    Mission state:
+Mission state:
 {json.dumps(trimmed, indent=2)}"""
 
     try:
-        client = _get_client()
-        if client is None:
-            return _fallback_response()
-
         response = client.messages.create(
-            model=ANTHROPIC_MODEL,
+            model="claude-opus-4-6",
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -83,18 +57,17 @@ Required keys:
                 text = text[4:]
             text = text.strip()
 
-        parsed = json.loads(text)
-        return {
-            "status_summary": parsed.get("status_summary", "AI summary unavailable."),
-            "critical_issues": parsed.get("critical_issues", []),
-            "recommendations": parsed.get("recommendations", []),
-            "outlook": parsed.get("outlook", "Unable to generate outlook."),
-            "crew_risk_level": parsed.get("crew_risk_level", "unknown"),
-        }
+        return json.loads(text)
 
     except json.JSONDecodeError as e:
         logger.error("Claude returned invalid JSON: %s", e)
-        return _fallback_response()
+        return {
+            "status_summary": "AI summary unavailable.",
+            "critical_issues": [],
+            "recommendations": [],
+            "outlook": "Unable to generate outlook.",
+            "crew_risk_level": "unknown"
+        }
     except Exception as e:
         logger.error("Claude API error: %s", e)
-        return _fallback_response()
+        return {"error": str(e)}
