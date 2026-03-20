@@ -11,25 +11,19 @@ logger = logging.getLogger(__name__)
 
 def get_client() -> Anthropic | None:
     raw = os.getenv("ANTHROPIC_API_KEY")
+
     if raw is None:
         logger.error("ANTHROPIC_API_KEY is missing")
         return None
 
-    api_key = raw.strip()
+    key = raw.strip()
 
-    logger.info(
-        "Anthropic key debug | startswith_sk_ant=%s | first_char=%r | length=%d | looks_json=%s",
-        api_key.startswith("sk-ant-"),
-        api_key[:1],
-        len(api_key),
-        api_key.startswith("{"),
-    )
+    logger.info("KEY RAW: %r", key[:20])
+    logger.info("KEY LEN: %d", len(key))
+    logger.info("STARTS WITH sk-ant: %s", key.startswith("sk-ant-"))
+    logger.info("FIRST CHAR: %r", key[:1])
 
-    if not api_key:
-        logger.error("ANTHROPIC_API_KEY is empty")
-        return None
-
-    return Anthropic(api_key=api_key)
+    return Anthropic(api_key=key)
 
 def fallback_response() -> dict:
     return {
