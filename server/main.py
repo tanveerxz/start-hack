@@ -645,11 +645,4 @@ async def ai_summary(day: int):
 
     result = get_ai_summary(raw)
 
-    # Surface Claude errors as 502 rather than silently returning empty data
-    if "error" in result:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Claude API error: {result['error']}"
-        )
-
     return result
