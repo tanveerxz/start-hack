@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import HeroOverlay from '@/components/HeroOverlay'
 import { useScrollProgress } from '@/hooks/useScrollProgress'
@@ -11,6 +12,29 @@ const PHASE_SCROLL_POINTS = [0.08, 0.32, 0.56, 0.78, 0.96]
 
 export default function Home() {
   const { progress, mouse, scrollTo } = useScrollProgress()
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable
+      ) {
+        return
+      }
+
+      const phaseIndex = Number.parseInt(event.key, 10) - 1
+      if (Number.isNaN(phaseIndex) || phaseIndex < 0 || phaseIndex >= PHASE_SCROLL_POINTS.length) {
+        return
+      }
+
+      scrollTo(PHASE_SCROLL_POINTS[phaseIndex])
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [scrollTo])
 
   const handleInitiate = (nextPhaseIndex?: number) => {
     if (typeof nextPhaseIndex !== 'number') return
