@@ -27,7 +27,7 @@ def _fallback_response() -> dict:
 
 
 def _get_client() -> Anthropic | None:
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         logger.warning("ANTHROPIC_API_KEY is not configured; using fallback AI response.")
         return None
