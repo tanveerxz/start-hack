@@ -13,17 +13,32 @@ def get_client() -> Anthropic | None:
     raw = os.getenv("ANTHROPIC_API_KEY")
 
     if raw is None:
-        logger.error("ANTHROPIC_API_KEY is missing")
+        logger.error("ANTHROPIC_API_KEY missing")
         return None
 
-    key = raw.strip()
+    value = raw.strip()
 
-    logger.info("KEY RAW: %r", key[:20])
-    logger.info("KEY LEN: %d", len(key))
-    logger.info("STARTS WITH sk-ant: %s", key.startswith("sk-ant-"))
-    logger.info("FIRST CHAR: %r", key[:1])
+    # Handle JSON-wrapped secrets
+    if value.startswith("{"):
+        try:
+            parsed = json.loads(value)
+            value = parsed.get("ANTHROPIC_API_KEY", "").strip()
+        except Exception:
+            logger.exception("Failed to parse JSON secret")
+            return None
 
-    return Anthropic(api_key=key)
+    # Handle accidentally quoted string
+    if value.startswith('"') and value.endswith('"'):
+        value = value[1:-1].strip()
+
+    logger.info("FINAL KEY PREFIX: %s", value[:10])
+    logger.info("VALID FORMAT: %s", value.startswith("sk-ant-"))
+
+    if not value.startswith("sk-ant-"):
+        logger.error("Invalid Anthropic key format after parsing")
+        return None
+
+    return Anthropic(api_key=value)
 
 def fallback_response() -> dict:
     return {
