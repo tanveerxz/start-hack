@@ -23,8 +23,6 @@ def _fallback_response() -> dict:
         ],
         "outlook": "Fallback guidance active because the Anthropic service is unavailable.",
         "crew_risk_level": "unknown",
-        "is_fallback": True,
-        "confidence": None,
     }
 
 
@@ -86,9 +84,13 @@ Required keys:
             text = text.strip()
 
         parsed = json.loads(text)
-        parsed.setdefault("is_fallback", False)
-        parsed.setdefault("confidence", None)
-        return parsed
+        return {
+            "status_summary": parsed.get("status_summary", "AI summary unavailable."),
+            "critical_issues": parsed.get("critical_issues", []),
+            "recommendations": parsed.get("recommendations", []),
+            "outlook": parsed.get("outlook", "Unable to generate outlook."),
+            "crew_risk_level": parsed.get("crew_risk_level", "unknown"),
+        }
 
     except json.JSONDecodeError as e:
         logger.error("Claude returned invalid JSON: %s", e)
