@@ -13,4 +13,4 @@ run:
   command: python3 -m uvicorn main:app --host 0.0.0.0 --port 8080
   secrets:
     - name: ANTHROPIC_API_KEY
-      value-from: arn:aws:secretsmanager:us-west-2:348590979395:secret:Anthropic
+      value-from: arn:aws:secretsmanager:us-west-2:348590979395:secret:Anthropic-6WNooP
