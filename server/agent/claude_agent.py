@@ -9,7 +9,36 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+def get_client() -> Anthropic | None:
+    raw = os.getenv("ANTHROPIC_API_KEY")
+    if raw is None:
+        logger.error("ANTHROPIC_API_KEY is missing")
+        return None
+
+    api_key = raw.strip()
+
+    logger.info(
+        "Anthropic key debug | startswith_sk_ant=%s | first_char=%r | length=%d | looks_json=%s",
+        api_key.startswith("sk-ant-"),
+        api_key[:1],
+        len(api_key),
+        api_key.startswith("{"),
+    )
+
+    if not api_key:
+        logger.error("ANTHROPIC_API_KEY is empty")
+        return None
+
+    return Anthropic(api_key=api_key)
+
+def fallback_response() -> dict:
+    return {
+        "status_summary": "AI summary unavailable.",
+        "critical_issues": [],
+        "recommendations": [],
+        "outlook": "Unable to generate outlook.",
+        "crew_risk_level": "unknown"
+    }
 
 def get_ai_summary(sol_payload: dict) -> dict:
     trimmed = {
@@ -43,14 +72,18 @@ Mission state:
 {json.dumps(trimmed, indent=2)}"""
 
     try:
+        client = get_client()
+        if client is None:
+            return fallback_response()
+
         response = client.messages.create(
             model="claude-opus-4-6",
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}]
         )
+
         text = response.content[0].text.strip()
 
-        # Strip markdown fences if Claude adds them
         if text.startswith("```"):
             text = text.split("```")[1]
             if text.startswith("json"):
@@ -61,13 +94,7 @@ Mission state:
 
     except json.JSONDecodeError as e:
         logger.error("Claude returned invalid JSON: %s", e)
-        return {
-            "status_summary": "AI summary unavailable.",
-            "critical_issues": [],
-            "recommendations": [],
-            "outlook": "Unable to generate outlook.",
-            "crew_risk_level": "unknown"
-        }
-    except Exception as e:
-        logger.error("Claude API error: %s", e)
-        return {"error": str(e)}
+        return fallback_response()
+    except Exception:
+        logger.exception("Claude API error")
+        return fallback_response()
